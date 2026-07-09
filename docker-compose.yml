@@ -1,0 +1,38 @@
+# -----------------------------------------------------------------------------
+# MarketIQ — Local Development Infra
+#
+# Runs Postgres only. The Next.js app runs on the host via `npm run dev` for a
+# fast dev loop (hot reload, no volume-mount overhead). Containerizing the app
+# itself is a deployment concern, not a Sprint 1 local-dev concern — revisit
+# when we define the deployment approach.
+#
+# Usage:
+#   npm run db:up      Start Postgres in the background
+#   npm run db:down    Stop Postgres (data persists in the named volume)
+#   npm run db:logs    Tail Postgres logs
+#   npm run db:reset   Stop Postgres and delete all data (destructive)
+# -----------------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: marketiq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-marketiq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketiq}
+      POSTGRES_DB: ${POSTGRES_DB:-marketiq}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - marketiq_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-marketiq} -d ${POSTGRES_DB:-marketiq}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  marketiq_pgdata:
+    name: marketiq_pgdata

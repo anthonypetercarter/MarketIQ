@@ -1,0 +1,248 @@
+// -----------------------------------------------------------------------------
+// MarketIQ — Prisma Schema
+//
+// This schema is a direct translation of the domain model agreed on with the
+// founder before any tables were designed. Field and enum names intentionally
+// mirror product language (e.g. CouncilRecommendation values, "Defensive"
+// rather than "Bearish", "Increase Equity Allocation" rather than "Increase
+// Risk Exposure") so the schema stays legible as a product artifact, not
+// just a storage layer.
+// -----------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+enum CouncilRole {
+  CHIEF_MARKET_OFFICER
+  CHIEF_SECTOR_STRATEGIST
+  CHIEF_COMPANY_ANALYST
+  CHIEF_TECHNICAL_STRATEGIST
+  CHIEF_RISK_OFFICER
+  CHIEF_SCIENTIST
+  CHIEF_CLIENT_OFFICER
+  CHIEF_GOVERNANCE_OFFICER
+  CHIEF_INVESTMENT_OFFICER
+}
+
+enum MarketOutlook {
+  STRONGLY_BULLISH
+  MODERATELY_BULLISH
+  NEUTRAL
+  CAUTIOUS
+  DEFENSIVE
+}
+
+/// Investor-friendly headline recommendation. Deliberately about capital
+/// allocation, not individual securities — company-specific calls live in
+/// Opportunity and RecommendedAction instead.
+enum CouncilRecommendation {
+  INCREASE_EQUITY_ALLOCATION
+  MAINTAIN_CURRENT_ALLOCATION
+  REDUCE_EQUITY_ALLOCATION
+}
+
+enum ActionType {
+  BUY
+  REDUCE
+  HOLD
+  WATCH
+  REBALANCE
+}
+
+/// Each executive's up-or-down stance on the Brief's headline recommendation.
+enum CouncilVerdict {
+  SUPPORT
+  SUPPORT_WITH_RESERVATIONS
+  NEUTRAL
+  OPPOSE
+}
+
+// -----------------------------------------------------------------------------
+// Core entities
+// -----------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  portfolio Portfolio?
+  briefs    Brief[]
+
+  @@map("users")
+}
+
+model Portfolio {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  holdings Holding[]
+
+  @@map("portfolios")
+}
+
+model Holding {
+  id          String   @id @default(cuid())
+  portfolioId String
+  companyId   String
+  quantity    Decimal  @db.Decimal(18, 4)
+  costBasis   Decimal  @db.Decimal(18, 4) // average cost per share (mocked for V1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  company   Company   @relation(fields: [companyId], references: [id])
+
+  @@unique([portfolioId, companyId])
+  @@map("holdings")
+}
+
+model Company {
+  id     String @id @default(cuid())
+  ticker String @unique
+  name   String
+  sector String
+
+  holdings           Holding[]
+  opportunities      Opportunity[]
+  recommendedActions RecommendedAction[]
+
+  @@map("companies")
+}
+
+// -----------------------------------------------------------------------------
+// The MarketIQ Brief and everything it's composed of
+// -----------------------------------------------------------------------------
+
+model Brief {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+
+  /// One or two sentences powering the "Today's Decision" section — the
+  /// under-30-seconds summary at the top of the Brief. Distinct from
+  /// executiveSummary, which is the fuller Council Summary narrative.
+  decisionRationale String @db.Text
+
+  executiveSummary              String                @db.Text
+  councilRecommendation         CouncilRecommendation
+  councilConfidence             Int // 0-100; label (Low/Medium/High/Very High) derived at render time
+  marketOutlook                 MarketOutlook
+  historicalSimilarityNarrative String                @db.Text // mocked free text for V1
+
+  preparedBy String @default("MarketIQ Investment Council")
+  approvedBy String @default("Chief Investment Officer")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  councilAssessments CouncilAssessment[]
+  risks              Risk[]
+  opportunities      Opportunity[]
+  recommendedActions RecommendedAction[]
+  allocationTargets  AllocationTarget[]
+
+  @@unique([userId, date])
+  @@map("briefs")
+}
+
+/// One row per council role per Brief (9 total: 8 members + CIO).
+/// This is each executive's decision journal entry for that day.
+model CouncilAssessment {
+  id      String      @id @default(cuid())
+  briefId String
+  role    CouncilRole
+
+  opinion         String         @db.Text
+  confidenceScore Int // 0-100
+  rationale       String         @db.Text
+  risksNoted      String         @db.Text // this executive's raw risk observations
+  changeTrigger   String         @db.Text // "what would change my opinion"
+  verdict         CouncilVerdict
+
+  createdAt DateTime @default(now())
+
+  brief            Brief  @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  synthesizedRisks Risk[] @relation("RiskSourceAssessments")
+
+  @@unique([briefId, role])
+  @@map("council_assessments")
+}
+
+/// A CIO-synthesized Primary Risk. Always traceable to at least one
+/// CouncilAssessment — the CIO synthesizes Risks from what the council
+/// reported, but does not originate independent risks.
+model Risk {
+  id          String @id @default(cuid())
+  briefId     String
+  title       String
+  description String @db.Text
+
+  brief             Brief               @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  sourceAssessments CouncilAssessment[] @relation("RiskSourceAssessments")
+
+  @@map("risks")
+}
+
+/// Either company-specific (companyId set) or thematic (thematicTitle set).
+/// Exactly one of the two must be set — enforced in the application layer,
+/// since a portable CHECK constraint isn't expressible for this XOR shape.
+model Opportunity {
+  id            String  @id @default(cuid())
+  briefId       String
+  thesis        String  @db.Text
+  conviction    Int // 0-100
+  companyId     String?
+  thematicTitle String?
+
+  brief   Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@map("opportunities")
+}
+
+/// A discrete, potentially executable action tied to a Brief. The action
+/// with the lowest displayOrder is treated as the "immediate action" shown
+/// in the Today's Decision section, rather than duplicating that text.
+model RecommendedAction {
+  id           String     @id @default(cuid())
+  briefId      String
+  description  String     @db.Text
+  actionType   ActionType
+  displayOrder Int
+  companyId    String?
+
+  brief   Brief    @relation(fields: [briefId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@map("recommended_actions")
+}
+
+/// Explicit recommended capital allocation split for a Brief
+/// (e.g. "US Equities" -> 55.00, "Cash" -> 10.00).
+model AllocationTarget {
+  id            String  @id @default(cuid())
+  briefId       String
+  category      String
+  targetPercent Decimal @db.Decimal(5, 2)
+
+  brief Brief @relation(fields: [briefId], references: [id], onDelete: Cascade)
+
+  @@unique([briefId, category])
+  @@map("allocation_targets")
+}
