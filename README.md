@@ -4,9 +4,12 @@ An Investment Intelligence Platform. The product is the **MarketIQ Brief** — a
 council-produced recommendation designed to feel like it was prepared by an institutional
 investment committee.
 
-This is a founder's-edition MVP (Sprint 1). It is not for public release. See
-`/docs` (as it grows) and the project's governing documents — Constitution, MVP
-Specification, and Sprint 1 Outline — for product philosophy and scope.
+This is a founder's-edition MVP. **Sprint 1 is complete** — Dashboard and Brief are both
+built and reading-experience-tested; Portfolio, Companies, and Settings remain intentional
+"Coming Soon" placeholders per the Sprint 1 outline. See `/docs/decisions.md` for the
+reasoning behind what Sprint 1 deliberately did and didn't build, and the project's
+governing documents — Constitution, MVP Specification, and Sprint 1 Outline — for product
+philosophy and scope.
 
 ## Stack
 
@@ -102,6 +105,9 @@ Postgres scripts (`db:up`, `db:down`, `db:logs`, `db:reset`) are listed in
 
 `TodaysDecision` is shared between both pages — the Dashboard omits the
 `immediateAction` prop, the Brief supplies it.
+
+Both routes have a `loading.tsx` (minimal, no spinners — consistent with the editorial
+restraint the rest of the app follows) and an empty state for the pre-seed case.
 
 ## Design Language
 
