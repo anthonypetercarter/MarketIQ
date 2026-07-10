@@ -1,0 +1,21 @@
+{
+  "name": "MarketIQ",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [3000, 5432],
+  "portsAttributes": {
+    "3000": {
+      "label": "MarketIQ (npm run dev)",
+      "onAutoForward": "openPreview"
+    }
+  },
+  "postCreateCommand": "cp -n .env.example .env && npm install && docker compose up -d db && sleep 5 && npm run db:migrate -- --name init && npm run db:seed",
+  "postStartCommand": "docker compose up -d db",
+  "customizations": {
+    "vscode": {
+      "extensions": ["Prisma.prisma", "bradlc.vscode-tailwindcss", "esbenp.prettier-vscode"]
+    }
+  }
+}

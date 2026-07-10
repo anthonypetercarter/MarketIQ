@@ -20,6 +20,15 @@ MVP Specification, and Sprint 1 Outline — for product philosophy and scope.
 
 ## Getting Started
 
+### Option 1 — GitHub Codespaces (no local install)
+
+Open this repo in a Codespace (**Code → Codespaces → Create codespace on main**). The
+`.devcontainer` config handles everything automatically: installs dependencies, starts
+Postgres, runs migrations, seeds realistic data, and forwards port 3000 with a preview
+link. Takes a minute or two on first launch; nothing to configure.
+
+### Option 2 — Local
+
 ```bash
 npm install
 cp .env.example .env   # already done in this scaffold; edit values as needed
