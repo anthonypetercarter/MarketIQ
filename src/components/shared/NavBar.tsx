@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const COMING_SOON = ["Portfolio", "Companies", "Settings"];
+const COMING_SOON = ["Companies", "Settings"];
 
 export function NavBar() {
   return (
@@ -14,6 +14,9 @@ export function NavBar() {
         </Link>
         <Link href="/brief" className="text-ink-700 hover:text-ink-900">
           Brief
+        </Link>
+        <Link href="/portfolio" className="text-ink-700 hover:text-ink-900">
+          Portfolio
         </Link>
         {COMING_SOON.map((label) => (
           <span key={label} className="text-ink-300 hidden cursor-default sm:inline">

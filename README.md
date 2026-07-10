@@ -4,12 +4,11 @@ An Investment Intelligence Platform. The product is the **MarketIQ Brief** — a
 council-produced recommendation designed to feel like it was prepared by an institutional
 investment committee.
 
-This is a founder's-edition MVP. **Sprint 1 is complete** — Dashboard and Brief are both
-built and reading-experience-tested; Portfolio, Companies, and Settings remain intentional
-"Coming Soon" placeholders per the Sprint 1 outline. See `/docs/decisions.md` for the
-reasoning behind what Sprint 1 deliberately did and didn't build, and the project's
-governing documents — Constitution, MVP Specification, and Sprint 1 Outline — for product
-philosophy and scope.
+This is a founder's-edition MVP. **Sprint 1 and Sprint 2 are complete** — Dashboard, Brief,
+and Portfolio are all built and verified against real seeded data; Companies and Settings
+remain intentional "Coming Soon" placeholders. See `/docs/decisions.md` for the reasoning
+behind key implementation decisions, and the project's governing documents — Constitution,
+MVP Specification, and Sprint 1 Outline — for product philosophy and scope.
 
 ## Stack
 
@@ -67,13 +66,20 @@ in particular:
   committee's collective recommendation.
 - `Brief.decisionRationale` is the short, one-or-two-sentence line that powers
   the "Today's Decision" section — distinct from the fuller `executiveSummary`.
+- Sprint 2 additions: `Company.currentPrice` / `previousClosePrice` / `region`
+  (mocked, same spirit as the Council's mocked assessments) and
+  `Portfolio.cashBalance`. Sprint 2 only models Equities (Domestic +
+  International) and Cash as real holdings — Bonds and Alternatives show as
+  target-only ("not yet tracked") on the Portfolio page rather than inventing
+  fictional positions. See `docs/decisions.md`.
 
 Run `npm run db:migrate` to create or update the tables from the schema, then
-`npm run db:seed` to load one realistic day's mock Brief (`prisma/seed.ts`) —
-all nine Council voices, synthesized risks, opportunities, allocations, and
-recommended actions for Thursday, July 9, 2026. Both commands require network
-access to Prisma's engine CDN the first time they run on a new machine — a
-normal laptop/CI environment has this; a fully offline sandbox will not.
+`npm run db:seed` to load one realistic day's mock Brief and Portfolio
+(`prisma/seed.ts`) — all nine Council voices, synthesized risks, opportunities,
+allocations, recommended actions, and eleven diversified holdings designed to
+exercise every Portfolio rule. Both commands require network access to
+Prisma's engine CDN the first time they run on a new machine — a normal
+laptop/CI environment has this; a fully offline sandbox will not.
 
 ## Scripts
 
@@ -102,11 +108,19 @@ Postgres scripts (`db:up`, `db:down`, `db:logs`, `db:reset`) are listed in
   Opportunities and Risks (with source traceability), the nine-voice Council
   Summary, What Would Change Our Mind, Historical Similarity, and the
   Prepared-by/Approved-by footer.
+- **`/portfolio`** — Sprint 2. Answers "what does today's recommendation mean
+  for my portfolio," not a tracker. Portfolio Health (Tier 0: overall
+  alignment, primary issue, Brief date) → Allocation vs. Target → rule-engine
+  Recommended Changes, each with a "why you're seeing this" evidence citation
+  → Portfolio Summary (Total Value / Today's Change / Total Return — plain
+  numbers, no charts) → Current Holdings → Sector Exposure. See
+  `src/lib/portfolio/` for the rule engine and `docs/decisions.md` #2 for one
+  evidence-sourcing adjustment made during implementation.
 
-`TodaysDecision` is shared between both pages — the Dashboard omits the
+`TodaysDecision` is shared between Dashboard and Brief — the Dashboard omits the
 `immediateAction` prop, the Brief supplies it.
 
-Both routes have a `loading.tsx` (minimal, no spinners — consistent with the editorial
+All three routes have a `loading.tsx` (minimal, no spinners — consistent with the editorial
 restraint the rest of the app follows) and an empty state for the pre-seed case.
 
 ## Design Language
@@ -149,10 +163,13 @@ sandbox this was built in (see commit history / task notes for details).
     /ui                    → shadcn/ui primitives
     /brief                  → Brief-specific presentational components
     /dashboard               → Dashboard-specific presentational components
-    /shared                   → Cross-page atoms (VerdictBadge, Dateline, ConfidenceStat, etc.)
+    /portfolio                → Portfolio-specific presentational components
+    /shared                    → Cross-page atoms (VerdictBadge, Dateline, ConfidenceStat, etc.)
   /services
     /council                 → Empty through Sprint 1, by design — see docs/decisions.md #1
-  /lib                       → DB client (prisma.ts), confidence.ts, formatting helpers
+  /lib                       → DB client (prisma.ts), confidence.ts, labels.ts, formatting helpers
+    /portfolio                 → Rule engine: thresholds.ts, allocation.ts, rules.ts, summary.ts
+    /data                       → Page-level Prisma queries (brief.ts, portfolio.ts)
   /types                      → Empty for now — Prisma's generated types have covered every need so far
   /hooks                       → Shared React hooks
 /prisma                        → schema.prisma, prisma.config.ts, seed.ts; migrations generated locally
@@ -160,7 +177,7 @@ sandbox this was built in (see commit history / task notes for details).
 ```
 
 Most folders are still scaffolded ahead of use, empty aside from `.gitkeep`
-placeholders; they'll be filled in as each Sprint 1 task lands.
+placeholders; they'll be filled in as future sprints need them.
 
 ## Environment Variables
 

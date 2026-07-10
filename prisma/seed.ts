@@ -35,17 +35,134 @@ async function main() {
   });
 
   // --- Companies referenced by Opportunities / Recommended Actions ------
+  // currentPrice / previousClosePrice are mocked, same spirit as the
+  // Council's mocked assessments — see docs/decisions.md #1.
   const nvda = await prisma.company.upsert({
     where: { ticker: "NVDA" },
-    update: {},
-    create: { ticker: "NVDA", name: "NVIDIA Corp", sector: "Technology" },
+    update: { currentPrice: 135.0, previousClosePrice: 131.5, region: "DOMESTIC" },
+    create: {
+      ticker: "NVDA",
+      name: "NVIDIA Corp",
+      sector: "Technology",
+      currentPrice: 135.0,
+      previousClosePrice: 131.5,
+      region: "DOMESTIC",
+    },
   });
 
   const cat = await prisma.company.upsert({
     where: { ticker: "CAT" },
-    update: {},
-    create: { ticker: "CAT", name: "Caterpillar Inc", sector: "Industrials" },
+    update: { currentPrice: 412.0, previousClosePrice: 408.75, region: "DOMESTIC" },
+    create: {
+      ticker: "CAT",
+      name: "Caterpillar Inc",
+      sector: "Industrials",
+      currentPrice: 412.0,
+      previousClosePrice: 408.75,
+      region: "DOMESTIC",
+    },
   });
+
+  // --- Companies held in the Portfolio but not referenced by today's Brief.
+  // Deliberately 10 companies, not 3-4 — with only a handful of holdings,
+  // basic arithmetic makes every position "concentrated" at an 8% threshold,
+  // which defeats the point of the concentration rule. Real diversification
+  // is what makes NVDA's oversized position a genuine outlier to flag.
+  const otherHoldingsDefs = [
+    {
+      ticker: "MSFT",
+      name: "Microsoft Corp",
+      sector: "Technology",
+      currentPrice: 410.0,
+      previousClosePrice: 407.2,
+      region: "DOMESTIC" as const,
+    },
+    {
+      ticker: "AAPL",
+      name: "Apple Inc",
+      sector: "Technology",
+      currentPrice: 195.0,
+      previousClosePrice: 193.8,
+      region: "DOMESTIC" as const,
+    },
+    {
+      ticker: "JPM",
+      name: "JPMorgan Chase & Co",
+      sector: "Financials",
+      currentPrice: 210.0,
+      previousClosePrice: 208.9,
+      region: "DOMESTIC" as const,
+    },
+    {
+      ticker: "JNJ",
+      name: "Johnson & Johnson",
+      sector: "Healthcare",
+      currentPrice: 155.0,
+      previousClosePrice: 154.3,
+      region: "DOMESTIC" as const,
+    },
+    {
+      ticker: "PG",
+      name: "Procter & Gamble Co",
+      sector: "Consumer Staples",
+      currentPrice: 165.0,
+      previousClosePrice: 164.4,
+      region: "DOMESTIC" as const,
+    },
+    {
+      ticker: "ASML",
+      name: "ASML Holding N.V.",
+      sector: "Technology",
+      currentPrice: 780.0,
+      previousClosePrice: 771.4,
+      region: "INTERNATIONAL" as const,
+    },
+    {
+      ticker: "TSM",
+      name: "Taiwan Semiconductor Mfg Co",
+      sector: "Technology",
+      currentPrice: 145.0,
+      previousClosePrice: 143.8,
+      region: "INTERNATIONAL" as const,
+    },
+    {
+      ticker: "NVO",
+      name: "Novo Nordisk A/S",
+      sector: "Healthcare",
+      currentPrice: 110.0,
+      previousClosePrice: 109.2,
+      region: "INTERNATIONAL" as const,
+    },
+    {
+      ticker: "SHOP",
+      name: "Shopify Inc",
+      sector: "Technology",
+      currentPrice: 82.0,
+      previousClosePrice: 80.9,
+      region: "INTERNATIONAL" as const,
+    },
+    {
+      ticker: "TM",
+      name: "Toyota Motor Corp",
+      sector: "Consumer Discretionary",
+      currentPrice: 220.0,
+      previousClosePrice: 218.5,
+      region: "INTERNATIONAL" as const,
+    },
+  ];
+
+  const otherCompanies: Record<string, Awaited<ReturnType<typeof prisma.company.upsert>>> = {};
+  for (const def of otherHoldingsDefs) {
+    otherCompanies[def.ticker] = await prisma.company.upsert({
+      where: { ticker: def.ticker },
+      update: {
+        currentPrice: def.currentPrice,
+        previousClosePrice: def.previousClosePrice,
+        region: def.region,
+      },
+      create: def,
+    });
+  }
 
   // --- Brief (scalar fields) --------------------------------------------
   const decisionRationale =
@@ -390,6 +507,45 @@ async function main() {
   }
 
   console.log(`Seeded Brief ${brief.id} for ${user.name} (${BRIEF_DATE.toDateString()}).`);
+
+  // --- Portfolio ------------------------------------------------------------
+  // Deliberately designed to exercise every Sprint 2 rule against real data:
+  //  - NVDA concentration (>8%, and the Brief's Risk Officer flagged exactly
+  //    this concentration) -> Rule B
+  //  - Heavy international tilt vs. the Brief's targets in both directions
+  //    (underweight US, overweight International) -> Rule A
+  //  - Cash sitting well above target -> Rule D, referencing the seeded
+  //    REBALANCE action
+  //  - CAT held in the Brief's Opportunities but NOT in this portfolio -> Rule C
+  const portfolio = await prisma.portfolio.upsert({
+    where: { userId: user.id },
+    update: { cashBalance: 20000.0 },
+    create: { userId: user.id, cashBalance: 20000.0 },
+  });
+
+  const holdingsData: { companyId: string; quantity: number; costBasis: number }[] = [
+    { companyId: nvda.id, quantity: 150, costBasis: 98.0 },
+    { companyId: otherCompanies.MSFT.id, quantity: 24, costBasis: 350.0 },
+    { companyId: otherCompanies.AAPL.id, quantity: 50, costBasis: 165.0 },
+    { companyId: otherCompanies.JPM.id, quantity: 46, costBasis: 180.0 },
+    { companyId: otherCompanies.JNJ.id, quantity: 62, costBasis: 145.0 },
+    { companyId: otherCompanies.PG.id, quantity: 58, costBasis: 150.0 },
+    { companyId: otherCompanies.ASML.id, quantity: 12, costBasis: 650.0 },
+    { companyId: otherCompanies.TSM.id, quantity: 66, costBasis: 120.0 },
+    { companyId: otherCompanies.NVO.id, quantity: 87, costBasis: 95.0 },
+    { companyId: otherCompanies.SHOP.id, quantity: 117, costBasis: 65.0 },
+    { companyId: otherCompanies.TM.id, quantity: 43, costBasis: 195.0 },
+  ];
+
+  for (const holding of holdingsData) {
+    await prisma.holding.upsert({
+      where: { portfolioId_companyId: { portfolioId: portfolio.id, companyId: holding.companyId } },
+      update: { quantity: holding.quantity, costBasis: holding.costBasis },
+      create: { portfolioId: portfolio.id, ...holding },
+    });
+  }
+
+  console.log(`Seeded Portfolio ${portfolio.id} with ${holdingsData.length} holdings.`);
 }
 
 main()

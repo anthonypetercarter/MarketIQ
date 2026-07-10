@@ -67,6 +67,15 @@ enum CouncilVerdict {
   OPPOSE
 }
 
+/// Sprint 2: distinguishes Domestic vs International equity holdings so the
+/// Portfolio page can compare actual allocation against the Brief's
+/// AllocationTarget categories. Bonds/Alternatives aren't modeled as real
+/// holdings yet — see docs/decisions.md.
+enum CompanyRegion {
+  DOMESTIC
+  INTERNATIONAL
+}
+
 // -----------------------------------------------------------------------------
 // Core entities
 // -----------------------------------------------------------------------------
@@ -84,10 +93,11 @@ model User {
 }
 
 model Portfolio {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  cashBalance  Decimal  @default(0) @db.Decimal(18, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   holdings Holding[]
@@ -116,6 +126,14 @@ model Company {
   ticker String @unique
   name   String
   sector String
+
+  /// Sprint 2 additions — mocked for now, same spirit as the Council's
+  /// mocked assessments. currentPrice/previousClosePrice power the
+  /// Portfolio Summary's Total Value and Today's Change; region powers the
+  /// equity allocation comparison (Domestic vs International).
+  currentPrice       Decimal       @db.Decimal(18, 4)
+  previousClosePrice Decimal       @db.Decimal(18, 4)
+  region             CompanyRegion
 
   holdings           Holding[]
   opportunities      Opportunity[]
