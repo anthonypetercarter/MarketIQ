@@ -146,6 +146,26 @@ portfolio snapshots or recommendation history table exist yet (see
 All three routes have a `loading.tsx` (minimal, no spinners — consistent with the editorial
 restraint the rest of the app follows) and an empty state for the pre-seed case.
 
+## Market Data
+
+`docs/decisions.md` #5, Milestone 1. `src/lib/marketdata/` — real, tested clients:
+
+- `alpaca.ts` — Alpaca's multi-symbol snapshot endpoint, which returns `latestTrade` and
+  `prevDailyBar` together, mapped directly onto `Company.currentPrice` /
+  `previousClosePrice`. One request regardless of how many tickers are being refreshed.
+- `fred.ts` + `fredSeries.ts` — macro data (yield curve spread, Fed funds rate, a
+  high-yield credit spread proxy), named series IDs kept in one place.
+
+Both clients separate the network call from a pure parsing function
+(`parseSnapshotPrices` / `parseFredObservations`), so the mapping logic is verifiable
+against realistic mock responses without hitting either API.
+
+Run `npm run data:refresh-prices` to pull real prices for every seeded `Company` and
+update the database — requires `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY`, and
+`FRED_API_KEY` in `.env` (see `.env.example` for where to get free keys for both).
+Deliberately a manual script for now, not a scheduled job — see decision #5's staging
+discipline.
+
 ## Design Language
 
 Frozen after several rounds of founder review — see `src/app/globals.css` for tokens and
