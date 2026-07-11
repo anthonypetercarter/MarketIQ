@@ -219,3 +219,78 @@ order:
 No section on this layout exists that doesn't map to exactly one of the four questions.
 Market Outlook, full Allocation, Opportunities, and Risks confirmed absent — they answer
 "why should I believe it," which is the Brief's question, not the Dashboard's.
+
+---
+
+## 5. Council automation begins as a single structured-output call, not nine agents — amending decision #1's trigger
+
+**Status:** Accepted — pre-implementation, next milestone.
+
+**Context**
+
+Decision #1 deferred the Council service architecture until "individual members begin
+consuming real inputs... and producing independent, non-hardcoded assessments." Having
+now decided to pursue real market data (Alpaca) and real macro data (FRED), that trigger
+condition is being deliberately activated — this decision is not a new isolated choice,
+it's decision #1's own "when this changes" clause being exercised.
+
+The open question wasn't _whether_ to automate the Council, but _how many model calls
+that requires on day one_. The original architecture review (see the now-superseded
+proposal preceding this log) assumed nine independent `CouncilMember` LLM calls plus a
+CIO synthesis call — the full modular structure the Constitution and Sprint 1 outline
+originally described. Revisiting that before building it surfaced the same pattern
+decision #3 already established for the Recommendation Engine: **a target architecture
+being correct doesn't mean it's warranted yet.**
+
+**Decision**
+
+The next milestone builds a single AI call — `SingleCallGenerator` — that takes a
+structured `ResearchPacket` (real prices from Alpaca, real macro data from FRED, portfolio
+context, since-yesterday deltas) and produces a complete `BriefInput`: all nine
+`CouncilAssessment` rows, risks, opportunities, recommended actions, and allocation
+targets, in one generation. This is deliberately not the nine-agent architecture, even
+though nine-agent generation remains the believed long-term direction.
+
+The interface is designed so this isn't a prototype to be thrown away:
+
+```
+interface BriefGenerator {
+  generate(input: ResearchPacket): Promise<BriefInput>;
+}
+```
+
+`SingleCallGenerator` is the first implementation. If a future multi-agent
+`CouncilOrchestratorGenerator` is ever built, it implements the same interface and
+produces the same `BriefInput` shape — `ingestBrief()`, the schema, and every page built
+on top (Dashboard, Brief, Portfolio, the Recommendation Engine) never need to know which
+implementation produced today's Brief. This mirrors decision #1's core insight almost
+exactly: the persistence layer and UI were built against the _shape_ of a Brief, not
+against how it's produced, so this evolution is additive whichever way it goes.
+
+**The AI boundary, refined for this new context**
+
+Decision #3 established "AI ranks, never authors evidence" for the Recommendation Engine
+— appropriate there because portfolio rules are deterministic threshold checks. The
+Council is different in kind: forming a judgment from evidence is its actual job, per the
+Constitution. The boundary here is narrower but still hard: **AI may interpret and judge;
+it may never introduce a fact that isn't in the `ResearchPacket` it was given.** This is
+enforced structurally, not just by prompting — every generated assessment goes through a
+validation pass that checks numeric and factual claims against the packet's `citedMetrics`
+before anything is persisted. A Brief that fails validation is not saved.
+
+**When Stage 3 (the nine-agent architecture) gets built**
+
+Not on a schedule, and not because it was always the plan. The trigger is evidence from
+living with real, single-call-generated Briefs for real mornings, evaluated against:
+
+1. **Voice distinction** — reading assessments with roles hidden, can they be told apart?
+2. **Genuine tension** — do verdicts and confidence scores actually vary, or cluster
+   uniformly (a sign of one voice in nine hats, not nine independent views)?
+3. **Citation integrity** — does validation catch real problems, or is it consistently clean?
+4. **CIO synthesis quality** — does the Executive Summary weigh conflicting views, or
+   restate one conclusion eight times?
+5. **Constitution adherence** — tone and length holding up without heavy re-prompting.
+
+If these hold up, that's real evidence a single call is sufficient and decision #1's
+original nine-agent assumption was more architecture than the product needed. If they
+don't, that's the actual trigger for Stage 3 — a finding, not a guess.
