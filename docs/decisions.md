@@ -121,3 +121,78 @@ likely trigger: comparing today's fired recommendations against a prior day's in
 a cross-cutting concern that doesn't fit cleanly into any single rule function, which is
 exactly the kind of pressure that justifies the registry/ranking split. Until that
 pressure is real, `rules.ts` stays exactly as legible as it is today.
+
+**Addendum — the predicted trigger arrived, and the registry still isn't warranted**
+
+Sprint 3 scoped "Since Yesterday" (see decision #4). It's exactly the feature this decision
+predicted would create registry-justifying pressure — and having actually scoped it, that
+prediction turned out to be wrong. The first implementation is a direct diff of two
+`Recommendation` sets (yesterday's Brief vs. today's Brief, against the same static
+portfolio) — a comparison _between_ two runs of the existing engine, not a new kind of
+thing individual rules need to reason about. It doesn't touch `rules.ts` at all. The
+registry's trigger condition is still unmet. Worth recording that the prediction was
+tested and didn't hold, rather than quietly forgetting it was made.
+
+---
+
+## 4. The three-question architecture: Dashboard, Brief, and Portfolio each answer one question, and nothing else
+
+**Status:** Accepted — pre-Sprint 3.
+
+**Context**
+
+After using Sprint 2 running end-to-end (not just in screenshots), the Dashboard and Brief
+had converged — Dashboard had become a condensed copy of the Brief rather than a
+different job. Using the product surfaced what reviewing static mockups couldn't: the two
+pages were answering the same question at two different lengths, not two different
+questions.
+
+**Decision**
+
+The product organizes around exactly three questions, one per surface. This is now the
+standing test for whether a section belongs on a page, and for whether a future feature
+should exist at all:
+
+1. **Dashboard — "What should I do today?"** A 20–30 second morning check. Recommendation,
+   confidence, what changed since yesterday, portfolio health, one immediate action. If a
+   section doesn't help answer this question in under 30 seconds, it doesn't belong on
+   the Dashboard, no matter how good it looked there before.
+2. **Brief — "Why should I believe that?"** The evidence: Executive Summary, full
+   Allocation, Recommended Actions, full Opportunities and Risks with traceability, the
+   nine-voice Council Summary, What Would Change Our Mind, Historical Similarity.
+3. **Portfolio — "What does that mean for my money?"** Recommended Changes are the hero;
+   Allocation Comparison, Holdings, and Sector Exposure are supporting evidence for those
+   recommendations, not co-equal sections.
+
+**Concrete Sprint 3 consequences**
+
+- Market Outlook, full Allocation, Top Opportunities, and Primary Risks move off the
+  Dashboard entirely and become Brief-exclusive. The Dashboard gets _shorter_, not
+  restyled — this is what actually removes the duplication, not new copy.
+- **Immediate Action has one source of truth, two renders.** It's computed once (the
+  `RecommendedAction` with the lowest `displayOrder`, exactly as today) and displayed on
+  both Dashboard and Brief. Not two features — one piece of data in two contexts, matching
+  each surface's job: Dashboard shows it because that's the answer to "what should I do";
+  Brief shows it because that's what today's evidence concluded.
+- **"Since Yesterday"** compares two `Recommendation` sets — yesterday's Brief's outputs
+  vs. today's — against the same static portfolio. No portfolio snapshots, no
+  recommendation history table. See the addendum to decision #3: this was checked against
+  the registry's trigger condition and doesn't meet it.
+- **Investment Progress** is a first-class Dashboard section, not a Portfolio subsection.
+  Near-term: Portfolio Value and Since-Starting-With-MarketIQ figures are primary,
+  Today's Change is secondary — the inverse of `PortfolioSummaryStats`'s current equal
+  weighting. Long-term direction (alpha vs. benchmark, Council track record) is explicitly
+  not Sprint 3 scope, but worth naming: Council track record is the Chief Scientist's
+  stated job description from Sprint 1 ("owns the long-term intellectual honesty of the
+  council... validating whether past predictions actually played out") made visible, not
+  a new analytics feature invented from scratch.
+- **Portfolio reorders** to Health → Recommended Changes → Allocation Comparison →
+  Holdings/Sector Exposure. The conclusion leads; the evidence for it follows — the same
+  pattern the Brief already uses (Today's Decision first, Council Summary deep in Tier 3).
+
+**When this changes**
+
+Any future page or section gets the same test before it's built: which of the three
+questions does it answer? If the answer isn't immediately obvious, that's a signal to
+clarify the feature's job before writing code, not a reason to force it under whichever
+page seems closest.
