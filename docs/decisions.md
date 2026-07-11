@@ -196,3 +196,26 @@ Any future page or section gets the same test before it's built: which of the th
 questions does it answer? If the answer isn't immediately obvious, that's a signal to
 clarify the feature's job before writing code, not a reason to force it under whichever
 page seems closest.
+
+**Addendum — the Dashboard's question decomposes into four, and the layout follows directly**
+
+Using Sprint 2 end-to-end (not reviewing mockups) surfaced that "what should I do today"
+is really four sub-questions, and the Dashboard's job is to answer each exactly once, in
+order:
+
+1. **What should I do today?** → Today's Decision (Recommendation, Confidence, one-line
+   rationale, Immediate Action)
+2. **How am I doing?** → Quick Stats (Portfolio Value, Since Starting with MarketIQ,
+   Today's Change, Portfolio Health — the last shown as a status only, no primary-issue
+   sentence; that detail lives on `/portfolio`, not here)
+3. **What's changed since yesterday?** → Since Yesterday (a plain list; "nothing changed"
+   is itself a valid, valuable entry — see decision #3's addendum for how this is computed)
+4. **Where do I go next?** → two exits, not one: **Read Today's Brief** and **Open
+   Portfolio**. Previous Dashboard had a single CTA into the Brief only. Two exits is a
+   deliberate change: "why should I believe it" and "what does it mean for my money" are
+   different next-questions, so they get different links rather than forcing Portfolio
+   access through the Brief.
+
+No section on this layout exists that doesn't map to exactly one of the four questions.
+Market Outlook, full Allocation, Opportunities, and Risks confirmed absent — they answer
+"why should I believe it," which is the Brief's question, not the Dashboard's.
