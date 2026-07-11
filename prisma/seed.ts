@@ -546,6 +546,87 @@ async function main() {
   }
 
   console.log(`Seeded Portfolio ${portfolio.id} with ${holdingsData.length} holdings.`);
+
+  // --- Yesterday's Brief -----------------------------------------------------
+  // Deliberately minimal: no CouncilAssessments. Neither the Dashboard nor the
+  // Brief ever displays a prior day's Council Summary — the only reason this
+  // Brief exists is to give "Since Yesterday" something real to diff against.
+  // Values are chosen to produce a genuine, illustrative diff: recommendation
+  // changed (Maintain -> Increase), confidence moved (+6), one risk is new
+  // today (Rate Path Reversal), and today's Recommended Actions both drop
+  // yesterday's HOLD and add three new actions reflecting the stance change.
+  const YESTERDAY_BRIEF_DATE = new Date("2026-07-08");
+
+  const yesterdayBrief = await prisma.brief.upsert({
+    where: { userId_date: { userId: user.id, date: YESTERDAY_BRIEF_DATE } },
+    update: {},
+    create: {
+      id: "brief-2026-07-08",
+      userId: user.id,
+      date: YESTERDAY_BRIEF_DATE,
+      decisionRationale:
+        "Mixed signals across sectors argue for holding current positioning rather than " +
+        "adding risk before rate-path clarity improves.",
+      executiveSummary:
+        "The council is constructive but not yet ready to add risk. Breadth has improved " +
+        "modestly, but the Chief Sector Strategist wants confirmation over another session " +
+        "before calling it durable, and the Chief Risk Officer's concentration concern in " +
+        "AI-linked names remains unresolved. On balance, the evidence supports holding " +
+        "current positioning rather than increasing equity exposure today.",
+      councilRecommendation: "MAINTAIN_CURRENT_ALLOCATION",
+      councilConfidence: 68,
+      marketOutlook: "NEUTRAL",
+      historicalSimilarityNarrative:
+        "A comparable pause point to several prior mid-cycle consolidations, where waiting " +
+        "one to two sessions for breadth confirmation was the more reliable path.",
+    },
+  });
+
+  await prisma.risk.deleteMany({ where: { briefId: yesterdayBrief.id } });
+  await prisma.recommendedAction.deleteMany({ where: { briefId: yesterdayBrief.id } });
+  await prisma.allocationTarget.deleteMany({ where: { briefId: yesterdayBrief.id } });
+
+  await prisma.risk.create({
+    data: {
+      briefId: yesterdayBrief.id,
+      title: "Mega-Cap AI Concentration",
+      description:
+        "The market's advance is increasingly dependent on a small number of AI-linked names.",
+    },
+  });
+
+  await prisma.recommendedAction.create({
+    data: {
+      briefId: yesterdayBrief.id,
+      description: "Hold current positioning across major holdings pending clearer signals.",
+      actionType: "HOLD",
+      displayOrder: 1,
+    },
+  });
+
+  await prisma.recommendedAction.create({
+    data: {
+      briefId: yesterdayBrief.id,
+      description:
+        "Monitor credit spreads and rate-path signals for the reversal scenario described in Primary Risks.",
+      actionType: "WATCH",
+      displayOrder: 2,
+    },
+  });
+
+  const yesterdayAllocations: { category: string; targetPercent: number }[] = [
+    { category: "US Equities", targetPercent: 55 },
+    { category: "International Equities", targetPercent: 13 },
+    { category: "Bonds", targetPercent: 18 },
+    { category: "Cash", targetPercent: 10 },
+    { category: "Alternatives", targetPercent: 4 },
+  ];
+
+  for (const allocation of yesterdayAllocations) {
+    await prisma.allocationTarget.create({ data: { briefId: yesterdayBrief.id, ...allocation } });
+  }
+
+  console.log(`Seeded Brief ${yesterdayBrief.id} (yesterday) for Since Yesterday comparison.`);
 }
 
 main()

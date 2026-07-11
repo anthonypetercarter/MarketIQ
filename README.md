@@ -109,22 +109,36 @@ Postgres scripts (`db:up`, `db:down`, `db:logs`, `db:reset`) are listed in
 
 ## Pages
 
-- **`/`** — Dashboard. Answers "what should I do today" in under 30 seconds:
-  Today's Decision, Market Outlook + Allocation, compact Opportunities/Risks, one
-  CTA out to the Brief.
-- **`/brief`** — the full CIO memo. Today's Decision (with the immediate next
-  action), Executive Summary, full Allocation, Recommended Actions, full
-  Opportunities and Risks (with source traceability), the nine-voice Council
-  Summary, What Would Change Our Mind, Historical Similarity, and the
-  Prepared-by/Approved-by footer.
-- **`/portfolio`** — Sprint 2. Answers "what does today's recommendation mean
-  for my portfolio," not a tracker. Portfolio Health (Tier 0: overall
-  alignment, primary issue, Brief date) → Allocation vs. Target → rule-engine
-  Recommended Changes, each with a "why you're seeing this" evidence citation
-  → Portfolio Summary (Total Value / Today's Change / Total Return — plain
-  numbers, no charts) → Current Holdings → Sector Exposure. See
-  `src/lib/portfolio/` for the rule engine and `docs/decisions.md` #2 for one
-  evidence-sourcing adjustment made during implementation.
+- **`/`** — Dashboard. An executive morning briefing, not a condensed Brief — see
+  `docs/decisions.md` #4. Answers exactly four questions, one section each:
+  Today's Decision (what should I do), Investment Progress (how am I doing),
+  Since Yesterday (what changed — "nothing changed" is a valid, shown result),
+  and Continue Reading (two exits: Brief and Portfolio). Market Outlook,
+  Allocation, Opportunities, and Risks are deliberately absent — they're
+  Brief-exclusive now.
+- **`/brief`** — the full CIO memo, answering "why should I believe today's
+  recommendation." Today's Decision (with the immediate next action),
+  Executive Summary, full Allocation, Recommended Actions, full Opportunities
+  and Risks (with source traceability), the nine-voice Council Summary, What
+  Would Change Our Mind, Historical Similarity, and the Prepared-by/Approved-by
+  footer.
+- **`/portfolio`** — answers "what does today's recommendation mean for my
+  money," not a tracker. Portfolio Health → Allocation vs. Target →
+  Recommended Changes (rule-engine output, each with a "why you're seeing
+  this" evidence citation) → Portfolio Summary → Current Holdings → Sector
+  Exposure. See `src/lib/portfolio/` for the rule engine and
+  `docs/decisions.md` #2 for one evidence-sourcing adjustment made during
+  implementation. Reordering so Recommended Changes leads (per
+  `docs/decisions.md` #4) is agreed but not yet built — this page is still
+  Sprint 2's section order.
+
+`TodaysDecision`'s `immediateAction` is one computed value (the
+`RecommendedAction` with the lowest `displayOrder`) rendered on both Dashboard
+and Brief — one source of truth, two contexts, not two features.
+`src/lib/dashboard/sinceYesterday.ts` diffs two Briefs' recommendation,
+confidence, risks, and actions against the same static portfolio; no
+portfolio snapshots or recommendation history table exist yet (see
+`docs/decisions.md` #3's addendum for why that's still the right call).
 
 `TodaysDecision` is shared between Dashboard and Brief — the Dashboard omits the
 `immediateAction` prop, the Brief supplies it.
