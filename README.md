@@ -166,6 +166,22 @@ update the database — requires `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY`, a
 Deliberately a manual script for now, not a scheduled job — see decision #5's staging
 discipline.
 
+### Paper Portfolio Sync
+
+`alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —
+it fetches your actual positions and cash balance, and never places an order. Run
+`npm run data:sync-portfolio` to mirror your paper account into `Portfolio`/`Holding`
+exactly: closed positions are removed, not left stale, and cost basis comes from
+Alpaca's own `avg_entry_price` (per-share), not `cost_basis` (the total position cost —
+an easy field to grab by mistake, since our `Holding.costBasis` is per-share throughout
+the codebase).
+
+A ticker Alpaca reports that MarketIQ has never seen gets created with honest
+placeholders (`name` = ticker, `sector` = "Unknown", `region` = "DOMESTIC") rather than a
+guess — Alpaca's positions endpoint doesn't return company metadata, only price and
+quantity. Correct these by hand (`npm run db:studio`) if Sector Exposure accuracy
+matters to you before your next look at the Portfolio page.
+
 ## Design Language
 
 Frozen after several rounds of founder review — see `src/app/globals.css` for tokens and
