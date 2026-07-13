@@ -294,3 +294,69 @@ living with real, single-call-generated Briefs for real mornings, evaluated agai
 If these hold up, that's real evidence a single call is sufficient and decision #1's
 original nine-agent assumption was more architecture than the product needed. If they
 don't, that's the actual trigger for Stage 3 — a finding, not a guess.
+
+---
+
+## 6. Today's Playbook — the Recommendation Engine completes the recommendation, V1 scoped to cash deployment only
+
+**Status:** Accepted — pre-Sprint 4.
+
+**Context**
+
+Several days of actually living with MarketIQ in Codespaces — not reviewing mockups —
+surfaced the biggest product insight since Sprint 1: the Portfolio page stops one step
+too early. Telling someone "you're underweight US Equities" is a diagnosis, not a
+recommendation — it still requires the investor to do real allocation math (how much
+capital, which opportunity, how many shares) before it's actionable. The insight: "Software
+should eliminate math, not create it."
+
+**Decision**
+
+"Recommended Changes" becomes **Today's Playbook**, promoted to the Portfolio page's hero
+section, answering four questions: Objective, Recommended Trades, Expected Portfolio, Why.
+This formally activates the ranking/synthesis layer decision #3 named as future
+architecture — reading the output of the existing rules plus the Brief's Opportunities and
+producing one coherent, evidence-linked plan — without building the registry, which four
+rules still don't need.
+
+**V1 is deliberately narrow, arrived at through two rounds of scoping down:**
+
+- **Cash deployment only. No sells.** A full rebalance is a constrained-optimizer problem
+  (deciding which specific holdings absorb a trim) that hasn't earned its complexity yet —
+  same discipline as decisions #1 and #3, applied a third time. Sells are deferred until
+  lived experience with V1 proves they're needed, not built speculatively now.
+- **One trade per day, not one per underweight category.** The product asks "if you only
+  do one thing today, what is it" — not "here is your shopping list." This also
+  substantially simplifies the algorithm: no per-category loop, just a single
+  highest-conviction selection across all valid candidates.
+- **Excess Cash = Current Cash − Target Cash**, deployable up to that amount. A clean,
+  deterministic formula — not a fuzzier "cash that can move without meaningfully breaching
+  target" concept that was proposed and then simplified away. If Excess Cash ≤ 0, there is
+  nothing to deploy.
+- **Only two categories are actionable: US and International Equities.** Bonds and
+  Alternatives aren't modeled as real holdings (see the Sprint 2 boundary, still true) —
+  there's no real Opportunity to buy against them regardless of what the gap shows.
+- **The concentration ceiling gates candidate selection, not just after-the-fact
+  flagging.** A trade that would push a position over `CONCENTRATION_PERCENT` is not a
+  valid candidate — the Playbook must never propose creating the exact problem the Risk
+  Officer flags elsewhere on the same page.
+- **No compelling candidate → the Playbook says so.** "Recommend waiting" is a real,
+  correct output, not a fallback to a worse trade. This is the feature's honesty
+  mechanism and gets its own milestone, not an afterthought.
+
+**The product boundary, restated precisely**
+
+MarketIQ always proposes the complete model portfolio move it would make — never a
+partial, self-moderated step. The investor controls aggressiveness entirely through which
+trades they choose to execute, not through the algorithm hedging on their behalf. MarketIQ
+never places an order; Alpaca remains the only place a trade actually happens. This is the
+same execution boundary the paper-portfolio sync (docs/decisions.md, Milestone 1 work)
+already established, reaffirmed here because Today's Playbook is the first feature
+specific enough that it could plausibly drift toward execution if built carelessly.
+
+**When V1 evolves toward full rebalance logic (sells)**
+
+Not on a schedule. The trigger is the same kind of evidence-based check as decision #5's
+Stage 3 criteria: living with cash-deployment-only Playbooks for real mornings and finding
+that "wait, nothing to deploy" or "the one trade doesn't move the needle enough" becomes a
+recurring, real limitation — not a hypothetical one.
