@@ -18,7 +18,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "data:refresh-prices": "tsx scripts/refresh-market-data.ts",
-    "data:sync-portfolio": "tsx scripts/sync-paper-portfolio.ts"
+    "data:sync-portfolio": "tsx scripts/sync-paper-portfolio.ts",
+    "data:verify-fred": "tsx scripts/verify-fred.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

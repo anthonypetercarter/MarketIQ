@@ -156,6 +156,12 @@ restraint the rest of the app follows) and an empty state for the pre-seed case.
 - `fred.ts` + `fredSeries.ts` — macro data (yield curve spread, Fed funds rate, a
   high-yield credit spread proxy), named series IDs kept in one place.
 
+Run `npm run data:verify-fred` once `FRED_API_KEY` is set to confirm the connection —
+prints the three tracked series with their latest values and direction of movement.
+Nothing consumes this data yet; it exists purely to give an immediate "the key works"
+moment ahead of Milestone 2 (the Research Packet), the same way `data:refresh-prices`
+does for Alpaca.
+
 Both clients separate the network call from a pure parsing function
 (`parseSnapshotPrices` / `parseFredObservations`), so the mapping logic is verifiable
 against realistic mock responses without hitting either API.
