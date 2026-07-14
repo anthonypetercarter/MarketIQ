@@ -295,6 +295,31 @@ If these hold up, that's real evidence a single call is sufficient and decision 
 original nine-agent assumption was more architecture than the product needed. If they
 don't, that's the actual trigger for Stage 3 — a finding, not a guess.
 
+**Addendum — a Brief that increases equity exposure must name a tradeable Opportunity**
+
+Surfaced while validating Today's Playbook (decision #6) against real data: a Brief can
+recommend `INCREASE_EQUITY_ALLOCATION` while naming zero company-specific Opportunities in
+an actionable category — only thematic ones, or none at all. Nothing before this caught
+that, because it never came up until something downstream (the Playbook) actually needed a
+real company to act on.
+
+The fix belongs here, not downstream. **A Brief that increases equity exposure must
+contain at least one company-specific Opportunity in an actionable category (US or
+International Equities).** The Playbook must never invent, substitute, or fall back to a
+company the Brief didn't name — it stays a pure consumer of Brief data with zero domain
+judgment of its own, the same discipline as everything else built so far. If a Brief fails
+this requirement, that's a content gap to fix at the source, not a case for the Playbook to
+work around.
+
+Today, with Briefs hand-authored, this is an editorial discipline — the same category of
+rule as "no invented figures" already governing how real Briefs get written. It is not
+being built as code right now; there is no automation yet for it to guard against, and
+building the check before `SingleCallGenerator` exists would repeat the exact mistake
+decision #1 already named. Once `SingleCallGenerator` exists, this becomes a mechanical
+validation step alongside citation integrity (see above) — a generated Brief recommending
+increased equity exposure with no real, tradeable Opportunity to support it should fail
+validation and regenerate, exactly like a fabricated fact would.
+
 ---
 
 ## 6. Today's Playbook — the Recommendation Engine completes the recommendation, V1 scoped to cash deployment only
@@ -343,6 +368,10 @@ rules still don't need.
 - **No compelling candidate → the Playbook says so.** "Recommend waiting" is a real,
   correct output, not a fallback to a worse trade. This is the feature's honesty
   mechanism and gets its own milestone, not an afterthought.
+- **The Playbook never invents a candidate the Brief didn't name.** If no real
+  company-specific Opportunity exists in an actionable category, the correct fix is
+  improving Brief content at the source — see decision #5's addendum. The Playbook stays a
+  pure consumer of Brief data, not a second investment-research engine.
 
 **The product boundary, restated precisely**
 
