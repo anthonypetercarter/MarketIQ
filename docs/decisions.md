@@ -389,3 +389,31 @@ Not on a schedule. The trigger is the same kind of evidence-based check as decis
 Stage 3 criteria: living with cash-deployment-only Playbooks for real mornings and finding
 that "wait, nothing to deploy" or "the one trade doesn't move the needle enough" becomes a
 recurring, real limitation — not a hypothetical one.
+
+**Addendum — lead with the conclusion, not the inputs; explain sizing dynamically, never with a fixed template**
+
+The first real run against actual portfolio data (100% cash, real July 13 Brief) surfaced
+a genuine presentation flaw, not an algorithm flaw. Leading the output with "Excess Cash:
+$90,000" set an implicit expectation — that the Playbook's job was to explain how to
+deploy that figure — which cash-deployment-only V1 was never designed to promise. The
+actual trade ($7,900, capped by the concentration ceiling) then read as incomplete rather
+than disciplined, even though the math was correct.
+
+**Decision:** the Playbook leads with the conclusion, not the constraints that produced
+it. Order: Objective → Today's Best Trade → Expected Result → Why. Excess Cash moves from
+headline to supporting context inside Why, alongside a dynamically generated explanation
+of whichever constraint — concentration limit, excess cash, or the allocation gap itself —
+actually determined the trade size today. That explanation is never a fixed template; a
+different constraint can bind on a different day, and a static sentence would eventually
+say something untrue, which is exactly the failure mode the explainability principle
+elsewhere in this product exists to prevent.
+
+Also added: **Expected Result shows "(Improving)"** when a trade narrows the gap even if
+the category remains UNDERWEIGHT overall — data that was already being computed
+(before/after gap comparison) and simply wasn't surfaced.
+
+**What did not change:** the algorithm itself. Excess Cash, the concentration ceiling, and
+the allocation gap remain exactly the same three sizing inputs decision #6 originally
+specified. "Today's Best Trade" still means today's best _buy_ — this does not reopen the
+no-sells boundary above. This was purely a presentation and one small derived-value fix
+(which constraint bound, and whether the gap narrowed), not a reopening of the V1 scope.
