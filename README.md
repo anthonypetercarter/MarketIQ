@@ -123,14 +123,15 @@ Postgres scripts (`db:up`, `db:down`, `db:logs`, `db:reset`) are listed in
   Would Change Our Mind, Historical Similarity, and the Prepared-by/Approved-by
   footer.
 - **`/portfolio`** — answers "what does today's recommendation mean for my
-  money," not a tracker. Portfolio Health → Allocation vs. Target →
-  Recommended Changes (rule-engine output, each with a "why you're seeing
-  this" evidence citation) → Portfolio Summary → Current Holdings → Sector
-  Exposure. See `src/lib/portfolio/` for the rule engine and
-  `docs/decisions.md` #2 for one evidence-sourcing adjustment made during
-  implementation. Reordering so Recommended Changes leads (per
-  `docs/decisions.md` #4) is agreed but not yet built — this page is still
-  Sprint 2's section order.
+  money," not a tracker. **Today's Playbook** is the hero: Objective →
+  Today's Best Trade → Expected Result → Why, per `docs/decisions.md` #6.
+  V1 is cash-deployment-only (no sells), recommends at most one highest-conviction
+  trade per day, and says "No Trade Today" honestly when nothing clears the
+  bar — it never invents a candidate the Brief didn't name. Below it, in
+  supporting order: Allocation vs. Target → Current Holdings → Sector
+  Exposure → Portfolio Summary. See `src/lib/portfolio/playbook.ts` for the
+  algorithm and `docs/decisions.md` #2 for one evidence-sourcing adjustment
+  made during implementation.
 
 `TodaysDecision`'s `immediateAction` is one computed value (the
 `RecommendedAction` with the lowest `displayOrder`) rendered on both Dashboard

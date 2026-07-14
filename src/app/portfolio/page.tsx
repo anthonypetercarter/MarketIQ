@@ -1,8 +1,7 @@
 import { NavBar } from "@/components/shared/NavBar";
 import { AllocationBar } from "@/components/shared/AllocationBar";
-import { PortfolioHealthSummary } from "@/components/portfolio/PortfolioHealthSummary";
+import { TodaysPlaybook } from "@/components/portfolio/TodaysPlaybook";
 import { AllocationComparisonBar } from "@/components/portfolio/AllocationComparisonBar";
-import { RecommendedChangesList } from "@/components/portfolio/RecommendedChangesList";
 import { PortfolioSummaryStats } from "@/components/portfolio/PortfolioSummaryStats";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
 import {
@@ -11,7 +10,7 @@ import {
   computeSectorExposure,
   computeTotalPortfolioValue,
 } from "@/lib/portfolio/allocation";
-import { computeRecommendedChanges, computePortfolioHealth } from "@/lib/portfolio/rules";
+import { computeTodaysPlaybook } from "@/lib/portfolio/playbook";
 import { computePortfolioSummary } from "@/lib/portfolio/summary";
 import { getPortfolioWithBriefContext } from "@/lib/data/portfolio";
 
@@ -58,27 +57,41 @@ export default async function PortfolioPage() {
     targetPercent: Number(t.targetPercent),
   }));
 
+  const opportunitiesForCalc = brief.opportunities.map((o) => ({
+    id: o.id,
+    thesis: o.thesis,
+    conviction: o.conviction,
+    companyId: o.companyId,
+    company: o.company
+      ? {
+          id: o.company.id,
+          ticker: o.company.ticker,
+          name: o.company.name,
+          region: o.company.region,
+          currentPrice: Number(o.company.currentPrice),
+        }
+      : null,
+  }));
+
   const totalValue = computeTotalPortfolioValue(holdingsForCalc, cashBalance);
   const currentAllocation = computeCurrentAllocation(holdingsForCalc, cashBalance);
   const gaps = computeAllocationGaps(currentAllocation, allocationTargets);
   const sectorExposure = computeSectorExposure(holdingsForCalc, cashBalance);
   const summary = computePortfolioSummary(holdingsForCalc, cashBalance);
 
-  const changes = computeRecommendedChanges({
+  const playbook = computeTodaysPlaybook({
     holdings: holdingsForCalc,
     cashBalance,
     allocationTargets,
-    opportunities: brief.opportunities,
-    recommendedActions: brief.recommendedActions,
+    opportunities: opportunitiesForCalc,
+    briefDate: brief.date,
   });
-
-  const health = computePortfolioHealth(gaps, changes, brief.date);
 
   return (
     <>
       <NavBar />
       <main className="mx-auto w-full max-w-[var(--content-width)] flex-1 px-8 py-10 sm:py-16">
-        <PortfolioHealthSummary health={health} />
+        <TodaysPlaybook playbook={playbook} />
 
         <div className="mt-[var(--section-gap)]">
           <h2 className="text-ink-500 text-label tracking-[0.06em] uppercase">
@@ -92,17 +105,6 @@ export default async function PortfolioPage() {
         </div>
 
         <div className="mt-[var(--section-gap)]">
-          <RecommendedChangesList changes={changes} />
-        </div>
-
-        <div className="mt-[var(--section-gap)]">
-          <h2 className="text-ink-500 text-label mb-4 tracking-[0.06em] uppercase">
-            Portfolio Summary
-          </h2>
-          <PortfolioSummaryStats summary={summary} />
-        </div>
-
-        <div className="mt-14">
           <HoldingsTable holdings={holdingsForCalc} totalValue={totalValue} />
         </div>
 
@@ -119,6 +121,13 @@ export default async function PortfolioPage() {
               />
             ))}
           </div>
+        </div>
+
+        <div className="mt-12">
+          <h2 className="text-ink-500 text-label mb-4 tracking-[0.06em] uppercase">
+            Portfolio Summary
+          </h2>
+          <PortfolioSummaryStats summary={summary} />
         </div>
       </main>
     </>
