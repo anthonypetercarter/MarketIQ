@@ -420,6 +420,101 @@ no-sells boundary above. This was purely a presentation and one small derived-va
 
 ---
 
+## 7. Portfolio Review — the first implementation of the North Star Vision
+
+**Status:** Accepted — implemented, terminal-verified, pending real-API and UI
+verification.
+
+**Context**
+
+The North Star Vision above named Portfolio Review as the eventual mechanism, explicitly
+"not scheduled." Three real mornings of living with Sprint 4's single-trade Playbook
+changed that — the founder judged that one recommended trade per day wasn't enough signal
+to evaluate whether the product was becoming a genuine AI Chief Investment Officer. This
+decision records what actually got built, distinct from the vision that motivated it.
+
+**Decision**
+
+The Council reviews the whole real portfolio together in one AI call — not one holding at
+a time — and returns an independent verdict per holding (`BUY` / `INCREASE` / `HOLD` /
+`REDUCE` / `EXIT`), each with real evidence, plus a narrative in the voice of committee
+meeting minutes. Structured output is forced via a tool-use schema (Anthropic API), not
+requested loosely in a system prompt.
+
+**Persistence, arrived at through pressure-testing, not proposed and accepted whole:**
+
+The first draft of this session's plan considered a `HoldingVerdict` table before anything
+had proven persistence was needed — caught and corrected by asking the same question
+decision #1 and decision #3 already answered: don't build structure before responsibility
+demands it. Every other portfolio-facing computation in this codebase (`AllocationGap`,
+`PortfolioHealth`, `TodaysPlaybook`, `SinceYesterday`) is a pure function, computed fresh
+on every page load, with zero dedicated table. The next draft proposed extending that
+pattern to Portfolio Review too — computed fresh, no persistence at all — which was also
+wrong, but for a different, important reason: an LLM call has real latency and cost that
+deterministic math doesn't, and identical inputs aren't guaranteed to produce identical
+output twice. A published daily opinion that changes on every refresh would undermine the
+exact trust this feature exists to build.
+
+The resolution: **generated once per real morning, published, then read — not
+regenerated — on every subsequent page load.** `PortfolioReview` is real, new
+persistence — the first model in this project that exists to publish a judgment rather
+than record something that actually happened (a Brief someone wrote, a trade someone
+placed). Deliberately minimal: one row per portfolio per day, one JSON column holding all
+verdicts, no child table per verdict. If a real future need arises to query across days
+(e.g., "every day AAPL got an EXIT verdict"), that's the trigger to normalize further —
+not before.
+
+**The Brief stays exactly as portfolio-agnostic as decision #4 established.** An earlier
+draft of this plan would have linked `Risk` to a specific `Company`, making Sell/Exit
+verdicts a mechanical side effect of how a Brief happened to be authored that day — caught
+before being built. The Council's per-holding judgment is a separate, independent
+evaluation that _reads_ the Brief as evidence; it does not derive from a structural field
+inside it. Brief drafting requires zero knowledge of any specific portfolio, unchanged.
+
+**The AI boundary, applied one level down from decision #5.** The Council may interpret
+and judge — verdict and evidence are real investment opinions, exactly the founder's
+explicit distinction: "deterministic code remains responsible for mechanics; the Council
+owns the opinions." It may never fabricate a fact the research packet didn't contain.
+Enforced structurally, not just by prompting: every verdict is validated against the
+packet before persisting, and — the one new discipline this feature required —
+**validation failures are isolated per holding.** One malformed or unvalidatable verdict
+degrades to a safe `HOLD` for that holding alone; it does not invalidate the other real
+verdicts in the same batch, and it never throws. An unevidenced `EXIT` specifically can
+never execute — it safe-defaults to `HOLD` rather than liquidating a real position on
+missing evidence.
+
+**Deterministic mechanics extended, not replaced.** `BUY`/`INCREASE` reuse Today's
+Playbook's existing sizing exactly as built. `REDUCE` required one genuinely new function
+— `computeReduceToConcentrationCeiling`, trimming a position down to exactly the
+concentration threshold, since prior logic only ever blocked new buys at that line and
+never computed a trim amount. `EXIT` needed no new logic beyond full liquidation. The
+Council decides the verdict; these functions turn a `REDUCE`/`EXIT` verdict into a real
+share count — the same separation of responsibility already established for `BUY`.
+
+**Multiple actionable items, not one headline.** Independent per-holding review naturally
+produces more than one real action on some mornings. The UI (not yet built) will
+prioritize, per the founder's "signal over noise" framing already recorded in the North
+Star Vision — reviewed holdings that warrant no change don't need to occupy space to prove
+they were reviewed — but will not artificially cap real, evidenced actions at one merely
+because decision #6 originally optimized for a single daily trade.
+
+**Verified so far:** the full pure-function chain — packet assembly against real Postgres
+data, validation against six deliberately adversarial synthetic inputs (a hallucinated
+ticker, a missing verdict, an invalid verdict enum, empty evidence, and total garbage
+input, plus the fully-valid case), and Reduce/Exit sizing math including confirming a
+trimmed position actually lands at or under the ceiling, not just that a number comes
+back. The live AI call itself has not yet been executed — this sandbox has no Anthropic
+API key configured for the running application, the same category of limitation as
+Alpaca and FRED before it. Live verification against a real API key and real UI work are
+both still pending.
+
+**When this gets revisited:** the UI is next, once the real AI output has actually been
+read and judged trustworthy — not before. Sell/full-portfolio-optimization boundaries
+beyond what's built here remain exactly where decision #6 and the North Star Vision left
+them.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

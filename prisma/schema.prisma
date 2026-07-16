@@ -100,6 +100,7 @@ model Portfolio {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   holdings Holding[]
+  reviews  PortfolioReview[]
 
   @@map("portfolios")
 }
@@ -173,6 +174,7 @@ model Brief {
   opportunities      Opportunity[]
   recommendedActions RecommendedAction[]
   allocationTargets  AllocationTarget[]
+  portfolioReviews   PortfolioReview[]
 
   @@unique([userId, date])
   @@map("briefs")
@@ -262,4 +264,56 @@ model AllocationTarget {
 
   @@unique([briefId, category])
   @@map("allocation_targets")
+}
+
+// -----------------------------------------------------------------------------
+// Portfolio Review — North Star Vision (docs/decisions.md)
+// -----------------------------------------------------------------------------
+
+/// Investment verdict on a single holding, per North Star Vision: the Council
+/// forms an independent judgment, not a rule-derived label.
+enum HoldingVerdict {
+  BUY
+  INCREASE
+  HOLD
+  REDUCE
+  EXIT
+}
+
+/// The Council's daily portfolio judgment — generated once each real morning
+/// by a single AI call reviewing the whole portfolio together (not one
+/// holding in isolation), then published and read on every subsequent page
+/// load rather than regenerated. References the day's Brief for evidence
+/// traceability, but is portfolio-specific — the Brief itself stays
+/// portfolio-agnostic, unchanged (see decision #4's Dashboard/Brief/Portfolio
+/// separation, still intact).
+///
+/// Deliberately minimal: one JSON column for the per-holding verdicts,
+/// not a child table per verdict. If a real future need arises to query
+/// across days (e.g. "every day AAPL got an EXIT verdict"), that's the
+/// trigger to normalize this further — not before.
+model PortfolioReview {
+  id          String   @id @default(cuid())
+  portfolioId String
+  briefId     String
+  date        DateTime @db.Date
+  generatedAt DateTime @default(now())
+
+  /// The "minutes of the meeting" — a short narrative capturing the
+  /// committee's overall discussion, distinct from the verdicts below.
+  /// The verdicts are the conclusion; this is the discussion that led there.
+  narrative String @db.Text
+
+  /// Array of { ticker, companyName, verdict, evidence: string[] }.
+  /// A verdict that fails validation against the research packet degrades
+  /// to a safe HOLD for that holding alone — see
+  /// src/lib/council/generatePortfolioReview.ts — rather than invalidating
+  /// the whole day's review.
+  verdicts Json
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  brief     Brief     @relation(fields: [briefId], references: [id])
+
+  @@unique([portfolioId, date])
+  @@map("portfolio_reviews")
 }

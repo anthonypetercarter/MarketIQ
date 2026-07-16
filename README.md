@@ -81,6 +81,13 @@ in particular:
   International) and Cash as real holdings — Bonds and Alternatives show as
   target-only ("not yet tracked") on the Portfolio page rather than inventing
   fictional positions. See `docs/decisions.md`.
+- `PortfolioReview` — the first model in this project that persists a
+  generated judgment rather than a record of something that happened.
+  References a `Brief` for evidence context but stays portfolio-specific;
+  the `Brief` itself remains portfolio-agnostic, unchanged. One row per
+  portfolio per day; verdicts live in one JSON column, not a child table —
+  see the Portfolio Review section below and `docs/decisions.md`'s North
+  Star Vision for why.
 
 Run `npm run db:migrate` to create or update the tables from the schema, then
 `npm run db:seed` to load one realistic day's mock Brief and Portfolio
@@ -188,6 +195,42 @@ placeholders (`name` = ticker, `sector` = "Unknown", `region` = "DOMESTIC") rath
 guess — Alpaca's positions endpoint doesn't return company metadata, only price and
 quantity. Correct these by hand (`npm run db:studio`) if Sector Exposure accuracy
 matters to you before your next look at the Portfolio page.
+
+## Portfolio Review
+
+North Star Vision (`docs/decisions.md`). The Council reviews the whole real portfolio
+together in one AI call — not one holding in isolation — and produces an independent
+investment verdict per holding (`BUY` / `INCREASE` / `HOLD` / `REDUCE` / `EXIT`), each with
+real evidence, plus a short narrative in the voice of committee meeting minutes rather
+than a trade list.
+
+- `src/lib/council/researchPacket.ts` — pure function structuring real Brief + portfolio
+  data into what the AI call reads. No AI logic here.
+- `src/lib/council/generatePortfolioReview.ts` — the single AI call (Anthropic API,
+  structured output via forced tool use). Returns raw, unvalidated output only.
+- `src/lib/council/validatePortfolioReview.ts` — validates every verdict against the
+  research packet before anything is trusted. **Per-holding failure isolation**: one
+  malformed or unvalidatable verdict degrades to a safe `HOLD` for that holding alone,
+  never invalidates the other real verdicts, never throws.
+- `src/lib/portfolio/playbook.ts` also gained `computeReduceToConcentrationCeiling` and
+  `computeExitSizing` — the only genuinely new deterministic math this feature needed.
+  The AI decides the verdict; these functions turn `REDUCE`/`EXIT` into a real share
+  count, the same separation of responsibility Today's Playbook already established for
+  `BUY`/`INCREASE`.
+
+Generated **once per real morning**, not on every page load — an LLM call has real
+latency and cost that deterministic portfolio math doesn't, and identical inputs aren't
+guaranteed to produce identical output twice. `PortfolioReview` is a genuinely new
+persisted model (the first one in this project that exists to publish a judgment rather
+than record something that happened), deliberately minimal: one row per portfolio per
+day, one JSON column for all verdicts, no child table per verdict until a real need to
+query across days actually arises.
+
+Requires `ANTHROPIC_API_KEY` in `.env` (get one at
+[console.anthropic.com](https://console.anthropic.com)). Run
+`npm run council:generate-review` once a real Brief and a real portfolio with holdings
+both exist — prints the full narrative and every verdict with its evidence to the
+terminal before anything reaches the UI.
 
 ## Design Language
 

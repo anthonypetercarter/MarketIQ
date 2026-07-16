@@ -53,6 +53,39 @@ export interface OpportunityCandidate {
   company: OpportunityCompany | null;
 }
 
+export interface HoldingSizing {
+  sharesToSell: number;
+  estimatedProceeds: number;
+}
+
+/**
+ * REDUCE mechanics — trims a position down to exactly the concentration
+ * ceiling. This is genuinely new math: today's ceiling logic only ever
+ * blocked new buys at this line before; it never computed a trim amount.
+ * Returns null if the position isn't actually over the ceiling (a REDUCE
+ * verdict without a real breach shouldn't produce a trade).
+ */
+export function computeReduceToConcentrationCeiling(
+  holding: HoldingWithCompany,
+  totalPortfolioValue: number,
+): HoldingSizing | null {
+  const currentValue = marketValue(holding);
+  const ceilingValue = (PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT / 100) * totalPortfolioValue;
+  if (currentValue <= ceilingValue) return null;
+
+  const excessValue = currentValue - ceilingValue;
+  const sharesToSell = Math.min(
+    Math.ceil(excessValue / holding.company.currentPrice),
+    holding.quantity,
+  );
+  return { sharesToSell, estimatedProceeds: sharesToSell * holding.company.currentPrice };
+}
+
+/** EXIT mechanics — full liquidation. No new sizing logic needed beyond selling everything held. */
+export function computeExitSizing(holding: HoldingWithCompany): HoldingSizing {
+  return { sharesToSell: holding.quantity, estimatedProceeds: marketValue(holding) };
+}
+
 export interface PlaybookWait {
   status: "WAIT";
   excessCash: number;

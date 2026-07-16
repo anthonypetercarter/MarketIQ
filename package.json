@@ -19,9 +19,11 @@
     "db:seed": "prisma db seed",
     "data:refresh-prices": "tsx scripts/refresh-market-data.ts",
     "data:sync-portfolio": "tsx scripts/sync-paper-portfolio.ts",
-    "data:verify-fred": "tsx scripts/verify-fred.ts"
+    "data:verify-fred": "tsx scripts/verify-fred.ts",
+    "council:generate-review": "tsx scripts/generate-portfolio-review.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "next": "16.2.10",
