@@ -417,3 +417,118 @@ the allocation gap remain exactly the same three sizing inputs decision #6 origi
 specified. "Today's Best Trade" still means today's best _buy_ — this does not reopen the
 no-sells boundary above. This was purely a presentation and one small derived-value fix
 (which constraint bound, and whether the gap narrowed), not a reopening of the V1 scope.
+
+---
+
+# North Star Vision
+
+**Status:** Vision — not scheduled, not an implementation decision. Nothing below is
+committed work. This section exists to steer how future numbered decisions get evaluated,
+not to become one itself.
+
+**Why this isn't Decision #7:** every decision above was made because something concrete
+needed building next. This wasn't reached that way — it emerged from several days of
+actually living with a real paper portfolio, converging independently on the same
+conclusion from more than one angle before it was written down. It describes where the
+product is heading, not what gets built next. Recording it as a numbered decision would
+misrepresent it as scheduled work.
+
+## The Charter
+
+**MarketIQ's purpose is to continuously improve the quality of a user's portfolio over
+time as new evidence emerges — not to maximize today's return or maximize the number of
+trades recommended.**
+
+This isn't a new idea being introduced here; it's naming something that's been present
+since Sprint 1 without being stated as the product's actual charter:
+
+- The Constitution's Success section, verbatim: _"We are optimizing for better
+  decisions—not more trades."_
+- The Constitution's Continuous Learning principle: _"Every recommendation should improve
+  future recommendations."_
+- The Chief Scientist's role, unchanged since Sprint 1: validating whether past
+  predictions actually played out.
+- Investment Progress's stated long-term direction (decision #4): Council track record,
+  process quality over daily market movement.
+
+Four independent threads already pointed here. This is that convergence made explicit.
+
+**Honest limitation:** this charter is currently unmeasured. There's no mechanism yet to
+know whether a followed recommendation was actually good — that measurement is explicitly
+the Chief Scientist's eventual job, once there's enough real history to check against
+(two real Briefs exist as of this writing). The charter is what the product steers toward;
+it isn't yet something that can be verified true.
+
+## The Mechanism: Portfolio Review, Not Model Portfolio
+
+Two framings were pressure-tested against each other before converging here:
+
+- **Model Portfolio** — the Council constructs an ideal target portfolio each morning;
+  recommendations are the diff between that target and the user's actual holdings.
+- **Portfolio Review** — the Council evaluates the user's _actual current_ portfolio,
+  position by position, against the day's real evidence, and answers: what changes, if
+  any, should be made?
+
+**Portfolio Review is the better fit**, for two reasons. It's a more tractable evidence
+problem — "this position's thesis no longer holds, per today's Brief" is a claim the
+architecture can actually back with real citations, the same way it already backs
+concentration and allocation-gap claims. Constructing precise target weights without real
+optimization math underneath risks manufacturing false precision, which is exactly what
+the explainability principle exists to prevent. It's also more authentically how a CIO
+operates — continuous review of what's held, not daily reconstruction from scratch.
+
+Recommendations may take any of these forms, always with evidence — **including Hold**,
+which is a real, evidenced conclusion ("today's Brief still supports this thesis, no new
+developments"), not silence standing in for an answer:
+
+Buy · Increase · Hold · Reduce · Sell · Exit · No action
+
+## Signal Over Noise: Review Everything, Surface What Matters
+
+The Council reviews every position every morning. **The product does not need to display
+every evaluation to prove the review happened.** A Hold on a position where nothing
+changed doesn't need to occupy space in the Brief or Dashboard merely as evidence of due
+diligence — that would trade the product's calm, executive-focused feel for the appearance
+of thoroughness, which is precisely backwards for this product's design philosophy.
+
+The Brief and Dashboard should surface only recommendations that represent a meaningful
+change — new information, a thesis that broke, a threshold crossed. The full
+position-by-position review remains available as supporting detail for anyone who wants
+it, the same relationship Council Summary already has to Today's Decision: everything is
+evaluated, only what matters leads.
+
+## What This Explicitly Does Not Reopen
+
+- **The no-sells boundary.** Decision #6's V1 remains cash-deployment-only. This vision's
+  action list names Sell and Exit as eventual real outcomes — more explicitly than the
+  Model Portfolio framing did — which makes it more important, not less, to say clearly:
+  building that is an explicit future decision, not something this document authorizes.
+- **Autonomous execution.** MarketIQ proposes; it never places an order. Nothing here
+  changes that boundary.
+- **Decision #6 itself**, which remains fully intact. The current Playbook is the correct
+  MVP and is not being replaced today.
+
+## Architectural Seams Worth Preserving Now
+
+Nothing below requires building today. These are the seams that let today's Playbook
+evolve naturally into Portfolio Review later, instead of requiring a rewrite when the time
+comes:
+
+- **Keep "evaluate" and "decide what to surface" as separate steps**, even though today's
+  single-candidate selection does both in one pass. This mirrors decision #3's
+  ranking/synthesis layer — evaluation produces the full picture; a separate step decides
+  what earns the user's attention. Conflating them now would make the later split harder,
+  not easier.
+- **The evidence-integrity rule (decision #5's addendum) becomes load-bearing for the
+  whole portfolio, not just one daily pick.** It doesn't need to change — it needs to be
+  recognized now as the rule that will keep a much larger surface honest later.
+- **`PlaybookResult`'s shape already generalizes.** A single trade recommendation
+  naturally extends to an array of position-level recommendations, each carrying the same
+  per-item evidence pattern already built. No redesign implied.
+- **The data layer already fetches what full review would need** — holdings, the Brief,
+  Opportunities, and allocation targets are already loaded together in
+  `getPortfolioWithBriefContext()`.
+- **Scale is a real, open question, not yet a problem.** Evaluating every held position
+  with real, AI-generated evidence (rather than today's rule-based thresholds) is a
+  meaningfully larger generation surface than one daily candidate. Worth having named that
+  now, so it isn't a surprise whenever this actually gets built.
