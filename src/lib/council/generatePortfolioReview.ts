@@ -25,7 +25,10 @@ const PORTFOLIO_REVIEW_TOOL = {
         type: "string",
         description:
           "3-5 sentences in the voice of committee meeting minutes — what the group discussed and why, " +
-          "not a list of trades. The verdicts below are the conclusion of this discussion, not a repeat of it.",
+          "not a list of trades. The verdicts below are the conclusion of this discussion, not a repeat of it. " +
+          "This field must contain PLAIN PROSE ONLY — no XML tags, no closing tags, no embedded JSON, and no " +
+          "verdicts content of any kind. Put your full reasoning here as prose if you need the space; the " +
+          "verdicts array is a separate field below and must be populated there, not inside this string.",
       },
       verdicts: {
         type: "array",
@@ -80,6 +83,9 @@ function buildSystemPrompt(): string {
     "- REDUCE and EXIT are real, meaningful conclusions — use them when the evidence genuinely supports " +
       "them, not only when convenient. But don't manufacture urgency either: most mornings, most positions " +
       "genuinely warrant HOLD.",
+    "- The narrative field is plain prose only. Never include XML-like tags, closing tags, or a copy of the " +
+      "verdicts data inside the narrative string — the verdicts array is its own separate field in the tool " +
+      "call and must be populated there directly, not embedded as text anywhere else.",
   ].join("\n");
 }
 

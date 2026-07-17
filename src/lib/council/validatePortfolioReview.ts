@@ -65,6 +65,28 @@ function safeHold(ticker: string, companyName: string, reason: string): HoldingV
 const NARRATIVE_FALLBACK =
   "The committee reviewed the portfolio today; a narrative summary could not be generated.";
 
+function repairLeakedToolOutput(rawObj: RawReview): { result: RawReview; repaired: boolean } {
+  if (typeof rawObj.narrative !== "string") return { result: rawObj, repaired: false };
+
+  const closingTagIndex = rawObj.narrative.indexOf("</narrative>");
+  if (closingTagIndex === -1) return { result: rawObj, repaired: false };
+
+  const realNarrative = rawObj.narrative.slice(0, closingTagIndex).trim();
+  const afterClosingTag = rawObj.narrative.slice(closingTagIndex);
+
+  const verdictsMatch = afterClosingTag.match(/<verdicts>([\s\S]*?)<\/verdicts>/);
+  if (!verdictsMatch) {
+    return { result: { ...rawObj, narrative: realNarrative }, repaired: true };
+  }
+
+  try {
+    const extractedVerdicts = JSON.parse(verdictsMatch[1]);
+    return { result: { narrative: realNarrative, verdicts: extractedVerdicts }, repaired: true };
+  } catch {
+    return { result: { ...rawObj, narrative: realNarrative }, repaired: true };
+  }
+}
+
 /**
  * Validates raw AI output against the packet it was generated from. Never
  * throws — always returns a complete, safe result, one entry per real
@@ -75,7 +97,15 @@ export function validatePortfolioReview(
   packet: ResearchPacket,
 ): PortfolioReviewValidationResult {
   const warnings: string[] = [];
-  const rawObj = (typeof raw === "object" && raw !== null ? raw : {}) as RawReview;
+  const { result: rawObj, repaired } = repairLeakedToolOutput(
+    (typeof raw === "object" && raw !== null ? raw : {}) as RawReview,
+  );
+  if (repaired) {
+    warnings.push(
+      "Raw output had narrative/verdicts leaked together (a known model quirk) — repaired before validating. " +
+        "If this keeps happening, the prompt constraint may need to be strengthened further.",
+    );
+  }
 
   const narrative =
     typeof rawObj.narrative === "string" && rawObj.narrative.trim().length > 0
