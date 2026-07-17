@@ -76,25 +76,79 @@ function safeHold(ticker: string, companyName: string, reason: string): HoldingV
 const NARRATIVE_FALLBACK =
   "The committee reviewed the portfolio today; a narrative summary could not be generated.";
 
+/**
+ * Finds a JSON array in `text`, starting the search no earlier than
+ * `fromIndex`, by tracking bracket depth rather than matching a specific
+ * wrapper — the model's leak format isn't consistent between calls
+ * (sometimes wrapped in tags like <verdicts>...</verdicts>, sometimes just
+ * raw trailing JSON with no wrapper at all). Returns null if no balanced
+ * array is found (e.g. output was truncated mid-array).
+ */
+function findBalancedJsonArray(text: string, fromIndex: number): string | null {
+  const start = text.indexOf("[", fromIndex);
+  if (start === -1) return null;
+
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === "[") depth++;
+    else if (text[i] === "]") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+/**
+ * Defensive repair for a real, recurring failure mode: the model sometimes
+ * writes its entire response — narrative prose, then the verdicts array as
+ * literal JSON text — all inside the `narrative` string field, leaving the
+ * real `verdicts` field empty. Deliberately does NOT depend on a specific
+ * wrapper tag (an earlier version did, and broke the first time the leak
+ * took a slightly different shape) — instead, it fires whenever `verdicts`
+ * is empty and the narrative text contains the telltale sign of leaked
+ * verdict data (a literal "ticker" field), then locates the JSON array by
+ * bracket-balance alone, wherever it actually sits. The extracted data
+ * still runs through every existing validation check below — this repairs
+ * the *shape* of malformed input, it does not skip validating its content.
+ */
 function repairLeakedToolOutput(rawObj: RawReview): { result: RawReview; repaired: boolean } {
-  if (typeof rawObj.narrative !== "string") return { result: rawObj, repaired: false };
+  const hasRealVerdicts = Array.isArray(rawObj.verdicts) && rawObj.verdicts.length > 0;
+  if (typeof rawObj.narrative !== "string" || hasRealVerdicts) {
+    return { result: rawObj, repaired: false };
+  }
+
+  if (!rawObj.narrative.includes('"ticker"')) {
+    // verdicts is genuinely empty, not leaked into narrative — let normal
+    // validation report this honestly rather than treating it as a repair.
+    return { result: rawObj, repaired: false };
+  }
 
   const closingTagIndex = rawObj.narrative.indexOf("</narrative>");
-  if (closingTagIndex === -1) return { result: rawObj, repaired: false };
+  const searchFrom = closingTagIndex !== -1 ? closingTagIndex : 0;
 
-  const realNarrative = rawObj.narrative.slice(0, closingTagIndex).trim();
-  const afterClosingTag = rawObj.narrative.slice(closingTagIndex);
+  const bracketIndex = rawObj.narrative.indexOf("[");
+  const cutPoint =
+    closingTagIndex !== -1
+      ? closingTagIndex
+      : bracketIndex !== -1
+        ? bracketIndex
+        : rawObj.narrative.length;
+  const cleanNarrative = rawObj.narrative
+    .slice(0, cutPoint)
+    .replace(/<\/?narrative>/g, "")
+    .trim();
 
-  const verdictsMatch = afterClosingTag.match(/<verdicts>([\s\S]*?)<\/verdicts>/);
-  if (!verdictsMatch) {
-    return { result: { ...rawObj, narrative: realNarrative }, repaired: true };
+  const arrayText = findBalancedJsonArray(rawObj.narrative, searchFrom);
+  if (!arrayText) {
+    return { result: { ...rawObj, narrative: cleanNarrative }, repaired: true };
   }
 
   try {
-    const extractedVerdicts = JSON.parse(verdictsMatch[1]);
-    return { result: { narrative: realNarrative, verdicts: extractedVerdicts }, repaired: true };
+    const extractedVerdicts = JSON.parse(arrayText);
+    return { result: { narrative: cleanNarrative, verdicts: extractedVerdicts }, repaired: true };
   } catch {
-    return { result: { ...rawObj, narrative: realNarrative }, repaired: true };
+    return { result: { ...rawObj, narrative: cleanNarrative }, repaired: true };
   }
 }
 
