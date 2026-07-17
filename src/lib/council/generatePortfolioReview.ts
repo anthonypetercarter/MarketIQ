@@ -105,6 +105,16 @@ export async function callCouncilForPortfolioReview(packet: ResearchPacket): Pro
     tool_choice: { type: "tool", name: "publish_portfolio_review" },
   });
 
+  // TEMPORARY DIAGNOSTIC — remove once the malformed-output issue is understood.
+  console.error("=== RAW RESPONSE (debug) ===");
+  console.error("stop_reason:", response.stop_reason);
+  console.error(
+    "content block types:",
+    response.content.map((b) => b.type),
+  );
+  console.error(JSON.stringify(response.content, null, 2));
+  console.error("=== END RAW RESPONSE ===\n");
+
   const toolUse = response.content.find((block) => block.type === "tool_use");
   if (!toolUse || toolUse.type !== "tool_use") {
     throw new Error("The Council's AI call did not return a structured tool_use response.");
