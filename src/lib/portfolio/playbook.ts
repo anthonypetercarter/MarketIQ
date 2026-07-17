@@ -350,3 +350,60 @@ export function computeTodaysPlaybook(input: {
       "Excess cash is not sufficient to buy even one share of today's highest-conviction opportunities.",
   };
 }
+
+// -----------------------------------------------------------------------------
+// Portfolio Review — sizing for Council-selected new-position BUY verdicts.
+// The Council decides WHICH candidates deserve a BUY (a judgment call); this
+// turns that decision into real share counts, reusing the same Excess Cash
+// and concentration-ceiling math already proven in computeTodaysPlaybook.
+// -----------------------------------------------------------------------------
+
+export interface NewPositionTrade {
+  ticker: string;
+  companyName: string;
+  shares: number;
+  estimatedPricePerShare: number;
+  estimatedCost: number;
+}
+
+/**
+ * Sizes one or more Council-approved new-position BUY verdicts against a
+ * shared, finite Excess Cash pool. Processes candidates in the order given
+ * (callers should pass them highest-conviction-first) — each trade spends
+ * from the same remaining balance, so earlier candidates get first claim.
+ * A candidate is skipped (not zero-sized) if there isn't room for even one
+ * share, and processing continues to the next one rather than stopping.
+ */
+export function sizeNewPositionBuys(input: {
+  candidates: { ticker: string; companyName: string; currentPrice: number }[];
+  excessCash: number;
+  totalPortfolioValue: number;
+}): NewPositionTrade[] {
+  const { candidates, excessCash, totalPortfolioValue } = input;
+  const ceilingValue = (PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT / 100) * totalPortfolioValue;
+
+  let remainingCash = excessCash;
+  const trades: NewPositionTrade[] = [];
+
+  for (const candidate of candidates) {
+    if (remainingCash <= 0) break;
+
+    // A brand-new position starts at zero, so the concentration ceiling
+    // itself is the room available — no existing value to subtract.
+    const sizeDollars = Math.min(remainingCash, ceilingValue);
+    const shares = Math.floor(sizeDollars / candidate.currentPrice);
+    if (shares < 1) continue;
+
+    const estimatedCost = shares * candidate.currentPrice;
+    trades.push({
+      ticker: candidate.ticker,
+      companyName: candidate.companyName,
+      shares,
+      estimatedPricePerShare: candidate.currentPrice,
+      estimatedCost,
+    });
+    remainingCash -= estimatedCost;
+  }
+
+  return trades;
+}

@@ -17,7 +17,9 @@ import type { ResearchPacket } from "./researchPacket";
 const PORTFOLIO_REVIEW_TOOL = {
   name: "publish_portfolio_review",
   description:
-    "Publish today's portfolio committee review: a narrative summary and one verdict per held position.",
+    "Publish today's portfolio committee review: a narrative summary, one verdict per held position, and " +
+    "optionally a BUY verdict on a new, currently-unheld candidate if the evidence genuinely supports starting " +
+    "a new position.",
   input_schema: {
     type: "object" as const,
     properties: {
@@ -33,7 +35,13 @@ const PORTFOLIO_REVIEW_TOOL = {
       verdicts: {
         type: "array",
         description:
-          "Exactly one entry per holding provided in the research packet — no more, no fewer.",
+          "Exactly one entry per holding in the research packet's `holdings` list (using verdict values " +
+          "BUY/INCREASE/HOLD/REDUCE/EXIT as appropriate for an existing position) — no more, no fewer of " +
+          "those. You may ALSO include additional entries with verdict=BUY for tickers from the packet's " +
+          "`candidates` list (companies not currently held) if the evidence genuinely supports starting a " +
+          "new position — zero, one, or more than one if multiple candidates are each independently " +
+          "warranted. Never use BUY on a candidate ticker as a default; most mornings, no new position is " +
+          "warranted at all.",
         items: {
           type: "object" as const,
           properties: {
@@ -86,6 +94,11 @@ function buildSystemPrompt(): string {
     "- The narrative field is plain prose only. Never include XML-like tags, closing tags, or a copy of the " +
       "verdicts data inside the narrative string — the verdicts array is its own separate field in the tool " +
       "call and must be populated there directly, not embedded as text anywhere else.",
+    "- You may recommend starting a new position by adding a verdict entry with verdict=BUY for a ticker " +
+      "from the packet's `candidates` list — only from that list, never a ticker you weren't given. This is " +
+      "optional: most mornings, no new position is warranted. Only recommend one when the evidence — the " +
+      "candidate's real thesis and conviction, weighed against the portfolio's real allocation gaps — " +
+      "genuinely supports it, the same standard as every other verdict.",
   ].join("\n");
 }
 

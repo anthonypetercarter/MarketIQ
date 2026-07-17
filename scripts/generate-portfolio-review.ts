@@ -11,7 +11,12 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { computeCurrentAllocation, computeAllocationGaps } from "../src/lib/portfolio/allocation";
+import {
+  computeCurrentAllocation,
+  computeAllocationGaps,
+  computeTotalPortfolioValue,
+} from "../src/lib/portfolio/allocation";
+import { computeExcessCash, sizeNewPositionBuys } from "../src/lib/portfolio/playbook";
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
 import { callCouncilForPortfolioReview } from "../src/lib/council/generatePortfolioReview";
 import { validatePortfolioReview } from "../src/lib/council/validatePortfolioReview";
@@ -79,7 +84,14 @@ async function main() {
       decisionRationale: brief.decisionRationale,
       risks: brief.risks,
       opportunities: brief.opportunities.map((o) => ({
-        company: o.company ? { ticker: o.company.ticker } : null,
+        company: o.company
+          ? {
+              ticker: o.company.ticker,
+              name: o.company.name,
+              currentPrice: Number(o.company.currentPrice),
+              region: o.company.region,
+            }
+          : null,
         thematicTitle: o.thematicTitle,
         thesis: o.thesis,
         conviction: o.conviction,
@@ -100,27 +112,68 @@ async function main() {
     for (const w of result.warnings) console.log(`  - ${w}`);
   }
 
+  const totalPortfolioValue = computeTotalPortfolioValue(holdingsForCalc, cashBalance);
+  const cashTargetPercent = gaps.find((g) => g.category === "Cash")?.targetPercent ?? 0;
+  const excessCash = computeExcessCash(totalPortfolioValue, cashBalance, cashTargetPercent);
+
+  const newPositionTrades = sizeNewPositionBuys({
+    candidates: result.newPositionVerdicts,
+    excessCash,
+    totalPortfolioValue,
+  });
+  const tradeByTicker = new Map(newPositionTrades.map((t) => [t.ticker, t]));
+
+  const newPositions = result.newPositionVerdicts.map((v) => ({
+    ticker: v.ticker,
+    companyName: v.companyName,
+    verdict: "BUY" as const,
+    evidence: v.evidence,
+    trade: tradeByTicker.get(v.ticker) ?? null, // null = Council approved it, but no room/cash to size it today
+  }));
+
+  const storedVerdicts = { existingHoldings: result.verdicts, newPositions };
+
   const review = await prisma.portfolioReview.upsert({
     where: { portfolioId_date: { portfolioId: portfolio.id, date: brief.date } },
-    update: { briefId: brief.id, narrative: result.narrative, verdicts: result.verdicts },
+    update: { briefId: brief.id, narrative: result.narrative, verdicts: storedVerdicts },
     create: {
       portfolioId: portfolio.id,
       briefId: brief.id,
       date: brief.date,
       narrative: result.narrative,
-      verdicts: result.verdicts,
+      verdicts: storedVerdicts,
     },
   });
 
   console.log(`\nPublished Portfolio Review ${review.id} for ${brief.date.toDateString()}.\n`);
   console.log("Narrative:");
   console.log(result.narrative);
-  console.log("\nVerdicts:");
+
+  console.log("\nExisting Holdings:");
   for (const v of result.verdicts) {
     console.log(
       `  ${v.ticker} (${v.companyName}): ${v.verdict}${v.validated ? "" : " [safe default]"}`,
     );
     for (const e of v.evidence) console.log(`    - ${e}`);
+  }
+
+  if (newPositions.length === 0) {
+    console.log("\nNew Positions: none recommended today.");
+  } else {
+    console.log("\nNew Positions:");
+    for (const p of newPositions) {
+      console.log(`  ${p.ticker} (${p.companyName}): BUY`);
+      for (const e of p.evidence) console.log(`    - ${e}`);
+      if (p.trade) {
+        console.log(
+          `    -> Buy ${p.trade.shares} shares (~$${p.trade.estimatedPricePerShare}/share, ~$${p.trade.estimatedCost.toFixed(2)} total)`,
+        );
+      } else {
+        console.log(
+          `    -> Approved by the Council, but no Excess Cash/room left to size it today.`,
+        );
+      }
+    }
   }
 }
 

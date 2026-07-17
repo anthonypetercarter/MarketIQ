@@ -37,6 +37,20 @@ export interface ResearchPacketOpportunity {
   conviction: number;
 }
 
+/**
+ * A company-specific Opportunity from today's Brief that isn't currently
+ * held — the only tickers a BUY verdict may legitimately name. Never
+ * invented; always sourced directly from a real Opportunity row.
+ */
+export interface ResearchPacketCandidate {
+  ticker: string;
+  companyName: string;
+  region: "DOMESTIC" | "INTERNATIONAL";
+  currentPrice: number;
+  thesis: string;
+  conviction: number;
+}
+
 export interface ResearchPacketAllocationGap {
   category: string;
   actualPercent: number | null;
@@ -55,6 +69,8 @@ export interface ResearchPacket {
   opportunities: ResearchPacketOpportunity[];
   allocationGaps: ResearchPacketAllocationGap[];
   holdings: ResearchPacketHolding[];
+  /** Company-specific Opportunities not currently held — the only valid targets for a new BUY verdict. */
+  candidates: ResearchPacketCandidate[];
   cashBalance: number;
   totalPortfolioValue: number;
 }
@@ -68,7 +84,12 @@ interface BriefForPacket {
   decisionRationale: string;
   risks: ResearchPacketRisk[];
   opportunities: {
-    company: { ticker: string } | null;
+    company: {
+      ticker: string;
+      name: string;
+      currentPrice: number;
+      region: "DOMESTIC" | "INTERNATIONAL";
+    } | null;
     thematicTitle: string | null;
     thesis: string;
     conviction: number;
@@ -101,6 +122,18 @@ export function assembleResearchPacket(input: {
     };
   });
 
+  const heldTickers = new Set(holdings.map((h) => h.company.ticker));
+  const candidates: ResearchPacketCandidate[] = brief.opportunities
+    .filter((o) => o.company !== null && !heldTickers.has(o.company.ticker))
+    .map((o) => ({
+      ticker: o.company!.ticker,
+      companyName: o.company!.name,
+      region: o.company!.region,
+      currentPrice: o.company!.currentPrice,
+      thesis: o.thesis,
+      conviction: o.conviction,
+    }));
+
   return {
     briefDate: brief.date.toISOString().slice(0, 10),
     councilRecommendation: brief.councilRecommendation,
@@ -122,6 +155,7 @@ export function assembleResearchPacket(input: {
       status: g.status,
     })),
     holdings: packetHoldings,
+    candidates,
     cashBalance,
     totalPortfolioValue,
   };

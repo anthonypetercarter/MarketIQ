@@ -304,11 +304,15 @@ model PortfolioReview {
   /// The verdicts are the conclusion; this is the discussion that led there.
   narrative String @db.Text
 
-  /// Array of { ticker, companyName, verdict, evidence: string[] }.
-  /// A verdict that fails validation against the research packet degrades
-  /// to a safe HOLD for that holding alone — see
-  /// src/lib/council/generatePortfolioReview.ts — rather than invalidating
-  /// the whole day's review.
+  /// { existingHoldings: [{ticker, companyName, verdict, evidence[]}],
+  ///   newPositions: [{ticker, companyName, verdict:"BUY", evidence[], trade}] }.
+  /// existingHoldings has exactly one entry per real holding — a verdict
+  /// that fails validation degrades to a safe HOLD for that holding alone,
+  /// never invalidates the batch. newPositions is zero or more Council-
+  /// approved BUYs on currently-unheld candidates from that day's Brief,
+  /// sized against a shared Excess Cash pool — see
+  /// src/lib/council/validatePortfolioReview.ts and
+  /// src/lib/portfolio/playbook.ts's sizeNewPositionBuys.
   verdicts Json
 
   portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)

@@ -27,9 +27,20 @@ export interface HoldingVerdictResult {
   validated: boolean;
 }
 
+/** A validated BUY verdict on a candidate not currently held — carries what deterministic sizing needs. */
+export interface NewPositionVerdictResult {
+  ticker: string;
+  companyName: string;
+  evidence: string[];
+  conviction: number;
+  currentPrice: number;
+}
+
 export interface PortfolioReviewValidationResult {
   narrative: string;
   verdicts: HoldingVerdictResult[];
+  /** Validated BUY verdicts on new (currently unheld) positions — zero or more, not capped at one. */
+  newPositionVerdicts: NewPositionVerdictResult[];
   /** Human-readable notes on any degradations — for logging, not for display. */
   warnings: string[];
 }
@@ -117,21 +128,22 @@ export function validatePortfolioReview(
 
   const rawVerdicts: RawVerdictEntry[] = Array.isArray(rawObj.verdicts) ? rawObj.verdicts : [];
   const byTicker = new Map<string, RawVerdictEntry>();
-  for (const entry of rawVerdicts) {
-    if (entry && typeof entry.ticker === "string") {
-      byTicker.set(entry.ticker, entry);
-    }
-  }
+  const candidateEntriesByTicker = new Map<string, RawVerdictEntry>();
 
   const heldTickers = new Set(packet.holdings.map((h) => h.ticker));
+  const candidatesByTicker = new Map(packet.candidates.map((c) => [c.ticker, c]));
 
-  // Flag (don't fail on) verdicts for tickers not actually held — the AI
-  // hallucinating a position that doesn't exist is exactly the failure mode
-  // this validation exists to catch.
   for (const entry of rawVerdicts) {
-    if (typeof entry.ticker === "string" && !heldTickers.has(entry.ticker)) {
+    if (!entry || typeof entry.ticker !== "string") continue;
+    if (heldTickers.has(entry.ticker)) {
+      byTicker.set(entry.ticker, entry);
+    } else if (candidatesByTicker.has(entry.ticker)) {
+      candidateEntriesByTicker.set(entry.ticker, entry);
+    } else {
+      // Neither a held position nor a real candidate — the AI hallucinating
+      // a ticker it wasn't given is exactly the failure mode this exists to catch.
       warnings.push(
-        `Raw output included a verdict for "${entry.ticker}", which isn't a held position — discarded.`,
+        `Raw output included a verdict for "${entry.ticker}", which isn't a held position or a real candidate — discarded.`,
       );
     }
   }
@@ -171,5 +183,42 @@ export function validatePortfolioReview(
     };
   });
 
-  return { narrative, verdicts, warnings };
+  // Candidate BUY verdicts — only BUY is meaningful for a ticker not
+  // currently held; anything else (INCREASE/HOLD/REDUCE/EXIT on a position
+  // that doesn't exist) is discarded rather than guessed at.
+  const newPositionVerdicts: NewPositionVerdictResult[] = [];
+  for (const [ticker, raw] of candidateEntriesByTicker) {
+    const candidate = candidatesByTicker.get(ticker)!;
+
+    if (raw.verdict !== "BUY") {
+      warnings.push(
+        `Verdict "${JSON.stringify(raw.verdict)}" for unheld candidate ${ticker} isn't BUY — discarded, since only a new position (BUY) is meaningful for a ticker not currently held.`,
+      );
+      continue;
+    }
+
+    const evidence = Array.isArray(raw.evidence)
+      ? raw.evidence.filter((e): e is string => typeof e === "string" && e.trim().length > 0)
+      : [];
+
+    if (evidence.length === 0) {
+      warnings.push(`No usable evidence for candidate BUY on ${ticker} — discarded.`);
+      continue;
+    }
+
+    newPositionVerdicts.push({
+      ticker: candidate.ticker,
+      companyName: candidate.companyName,
+      evidence,
+      conviction: candidate.conviction,
+      currentPrice: candidate.currentPrice,
+    });
+  }
+
+  // Highest-conviction candidates first — deterministic sizing processes
+  // them in this order, same discipline as decision #6's original
+  // highest-conviction-first selection.
+  newPositionVerdicts.sort((a, b) => b.conviction - a.conviction);
+
+  return { narrative, verdicts, newPositionVerdicts, warnings };
 }

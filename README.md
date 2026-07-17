@@ -212,11 +212,21 @@ than a trade list.
   research packet before anything is trusted. **Per-holding failure isolation**: one
   malformed or unvalidatable verdict degrades to a safe `HOLD` for that holding alone,
   never invalidates the other real verdicts, never throws.
-- `src/lib/portfolio/playbook.ts` also gained `computeReduceToConcentrationCeiling` and
-  `computeExitSizing` — the only genuinely new deterministic math this feature needed.
-  The AI decides the verdict; these functions turn `REDUCE`/`EXIT` into a real share
-  count, the same separation of responsibility Today's Playbook already established for
-  `BUY`/`INCREASE`.
+- `src/lib/portfolio/playbook.ts` also gained `computeReduceToConcentrationCeiling`,
+  `computeExitSizing`, and `sizeNewPositionBuys` — the only genuinely new deterministic
+  math this feature needed. The AI decides the verdict; these functions turn a verdict
+  into a real share count, the same separation of responsibility Today's Playbook
+  already established for `BUY`/`INCREASE`.
+
+**New positions, not just existing holdings.** The research packet includes
+`candidates` — company-specific Opportunities from today's Brief not currently held —
+so the Council can recommend starting a position, not only judge what's already owned.
+`BUY` is the only valid verdict on a candidate (an unheld ticker can't sensibly be
+`REDUCE`d); anything else is discarded, not guessed at. Zero, one, or more than one new
+position can be approved on the same morning — real, evidenced candidates each get
+weighed independently, not artificially capped at one. Approved BUYs are sized against
+a **shared** Excess Cash pool in conviction order (`sizeNewPositionBuys`), so a
+lower-conviction second candidate only gets funded with whatever's left after the first.
 
 Generated **once per real morning**, not on every page load — an LLM call has real
 latency and cost that deterministic portfolio math doesn't, and identical inputs aren't
