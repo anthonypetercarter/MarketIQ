@@ -22,7 +22,11 @@ export async function getPortfolioWithBriefContext() {
 
   if (!brief) return null;
 
-  return { portfolio, brief };
+  const portfolioReview = await prisma.portfolioReview.findUnique({
+    where: { portfolioId_date: { portfolioId: portfolio.id, date: brief.date } },
+  });
+
+  return { portfolio, brief, portfolioReview };
 }
 
 export type PortfolioWithBriefContext = Awaited<ReturnType<typeof getPortfolioWithBriefContext>>;

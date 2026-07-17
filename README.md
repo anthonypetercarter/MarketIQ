@@ -130,15 +130,20 @@ Postgres scripts (`db:up`, `db:down`, `db:logs`, `db:reset`) are listed in
   Would Change Our Mind, Historical Similarity, and the Prepared-by/Approved-by
   footer.
 - **`/portfolio`** — answers "what does today's recommendation mean for my
-  money," not a tracker. **Today's Playbook** is the hero: Objective →
-  Today's Best Trade → Expected Result → Why, per `docs/decisions.md` #6.
-  V1 is cash-deployment-only (no sells), recommends at most one highest-conviction
-  trade per day, and says "No Trade Today" honestly when nothing clears the
-  bar — it never invents a candidate the Brief didn't name. Below it, in
-  supporting order: Allocation vs. Target → Current Holdings → Sector
-  Exposure → Portfolio Summary. See `src/lib/portfolio/playbook.ts` for the
-  algorithm and `docs/decisions.md` #2 for one evidence-sourcing adjustment
-  made during implementation.
+  money," not a tracker. **Portfolio Review** is the hero, per North Star
+  Vision (`docs/decisions.md`): a real Council judgment on the whole real
+  portfolio, generated once per morning — narrative (committee minutes) →
+  New Positions (the actionable conclusion) → Existing Holdings (supporting
+  detail, every position reviewed, only what matters leads). Replaces
+  Today's Playbook (decision #6), which recommended at most one
+  algorithmically-selected trade per day; Portfolio Review lets the Council
+  form independent judgments — `BUY` / `INCREASE` / `HOLD` / `REDUCE` /
+  `EXIT` — across every holding and any number of real, evidenced new
+  positions in one pass. Below it, in supporting order: Allocation vs.
+  Target → Current Holdings → Sector Exposure → Portfolio Summary. See
+  the Portfolio Review section below and `docs/decisions.md` #7 for the
+  full implementation history, including two real production bugs found,
+  fixed, and verified against live data before this UI was built.
 
 `TodaysDecision`'s `immediateAction` is one computed value (the
 `RecommendedAction` with the lowest `displayOrder`) rendered on both Dashboard
@@ -240,7 +245,28 @@ Requires `ANTHROPIC_API_KEY` in `.env` (get one at
 [console.anthropic.com](https://console.anthropic.com)). Run
 `npm run council:generate-review` once a real Brief and a real portfolio with holdings
 both exist — prints the full narrative and every verdict with its evidence to the
-terminal before anything reaches the UI.
+terminal.
+
+**UI:** `src/components/portfolio/PortfolioReviewPanel.tsx`, now the hero of `/portfolio`.
+New Positions leads (the actionable conclusion — real trade sizes when the Council
+approved room for them, an honest "no room left today" note when it didn't); Existing
+Holdings follows as supporting detail. An empty state prompts running the generation
+script when no review exists yet for today's Brief. No execution buttons anywhere — the
+same "MarketIQ proposes, never places an order" boundary as everywhere else in this app.
+
+**Two real production bugs, found and fixed against live output, not caught in
+synthetic testing:** the model twice leaked its full structured response — narrative
+prose, then the verdicts array as literal JSON text — inside the `narrative` string
+field alone, in two different shapes across two separate live calls. `validatePortfolioReview.ts`'s
+repair step no longer depends on any specific wrapper tag; it detects the leak
+structurally (an empty `verdicts` field plus a literal `"ticker"` substring in the
+narrative) and extracts the JSON via balanced-bracket matching wherever it actually
+sits. See `docs/decisions.md` #7 for the full history.
+
+**`computeTodaysPlaybook`** (decision #6's original algorithm) still exists in
+`src/lib/portfolio/playbook.ts` and is still exercised by `scripts/verify-playbook.ts` —
+deliberately left alone rather than deleted alongside its UI. Whether to remove it
+entirely is a real decision, not something to fold into a UI swap.
 
 ## Design Language
 

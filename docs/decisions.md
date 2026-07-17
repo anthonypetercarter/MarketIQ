@@ -422,8 +422,8 @@ no-sells boundary above. This was purely a presentation and one small derived-va
 
 ## 7. Portfolio Review — the first implementation of the North Star Vision
 
-**Status:** Accepted — implemented, terminal-verified, pending real-API and UI
-verification.
+**Status:** Accepted — implemented, verified against real live API output (including two
+real production bugs found and fixed), and shipped to the Portfolio page UI.
 
 **Context**
 
@@ -503,15 +503,50 @@ data, validation against six deliberately adversarial synthetic inputs (a halluc
 ticker, a missing verdict, an invalid verdict enum, empty evidence, and total garbage
 input, plus the fully-valid case), and Reduce/Exit sizing math including confirming a
 trimmed position actually lands at or under the ceiling, not just that a number comes
-back. The live AI call itself has not yet been executed — this sandbox has no Anthropic
-API key configured for the running application, the same category of limitation as
-Alpaca and FRED before it. Live verification against a real API key and real UI work are
-both still pending.
+back.
 
-**When this gets revisited:** the UI is next, once the real AI output has actually been
-read and judged trustworthy — not before. Sell/full-portfolio-optimization boundaries
-beyond what's built here remain exactly where decision #6 and the North Star Vision left
-them.
+**When this gets revisited:** Sell/full-portfolio-optimization boundaries beyond what's
+built here remain exactly where decision #6 and the North Star Vision left them.
+
+**Addendum — the Council can recommend new positions, not just judge existing ones; two
+real production bugs found and fixed; shipped to the UI**
+
+The first live run against real data surfaced a real gap the founder caught immediately:
+the Council correctly identified that 92% cash sitting idle was the actual problem, then
+correctly declined to say what to buy about it — because the system gave it no room to.
+`BUY` existed in the verdict enum but structurally could never target a ticker outside
+the held-positions list. Fixed at the source: the research packet now includes
+`candidates` (company-specific Opportunities from today's Brief not currently held — the
+only tickers a `BUY` verdict may legitimately name), and `sizeNewPositionBuys` sizes zero,
+one, or more Council-approved candidates against a **shared** Excess Cash pool in
+conviction order, reusing the same concentration-ceiling math as everywhere else in this
+codebase. Verified with synthetic tests (single-candidate concentration-bound sizing,
+two-candidate shared-pool sizing, skip-unaffordable-first-candidate, hallucinated-ticker
+rejection, nonsensical-verdict rejection) before any live call.
+
+Two real, reproducible bugs surfaced across the first three live calls — worth recording
+plainly since they were found in production, not caught by any test written in advance:
+
+1. The model wrote its entire response — narrative prose, a closing tag, and the
+   verdicts array as literal JSON text — all inside the `narrative` string field, leaving
+   the real `verdicts` field empty. A first fix (prompt constraint + a tag-specific
+   repair regex) worked on the next call, but not the one after that.
+2. The leak recurred in a **different shape** — no wrapper tag at all, just the raw JSON
+   array appended directly after the narrative — which the tag-specific repair couldn't
+   match, silently discarding a fully valid response (two real, well-reasoned `BUY`
+   approvals included). The repair was rewritten to be shape-agnostic: it fires when
+   `verdicts` is empty and the narrative contains a literal `"ticker"` field, then
+   extracts the JSON array via balanced-bracket matching wherever it actually sits,
+   independent of any specific tag. Confirmed against both real leak shapes, plus
+   confirmed it does not false-positive on genuinely clean output.
+
+With that verified against real, live-generated content — real evidence, real trade
+sizes, real prices from Alpaca, not synthetic test data — `PortfolioReviewPanel.tsx`
+shipped as the new hero of `/portfolio`, replacing Today's Playbook. New Positions leads
+(the actionable conclusion); Existing Holdings follows as supporting detail. Decision #6's
+`computeTodaysPlaybook` was deliberately left in place, unreferenced by any UI but still
+exercised by its own verification script — removing it entirely is a real decision, not
+something to fold silently into a UI swap.
 
 ---
 

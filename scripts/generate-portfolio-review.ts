@@ -20,6 +20,7 @@ import { computeExcessCash, sizeNewPositionBuys } from "../src/lib/portfolio/pla
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
 import { callCouncilForPortfolioReview } from "../src/lib/council/generatePortfolioReview";
 import { validatePortfolioReview } from "../src/lib/council/validatePortfolioReview";
+import type { StoredPortfolioReviewVerdicts } from "../src/lib/council/portfolioReviewTypes";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -131,7 +132,10 @@ async function main() {
     trade: tradeByTicker.get(v.ticker) ?? null, // null = Council approved it, but no room/cash to size it today
   }));
 
-  const storedVerdicts = { existingHoldings: result.verdicts, newPositions };
+  const storedVerdicts: StoredPortfolioReviewVerdicts = {
+    existingHoldings: result.verdicts,
+    newPositions,
+  };
 
   const review = await prisma.portfolioReview.upsert({
     where: { portfolioId_date: { portfolioId: portfolio.id, date: brief.date } },

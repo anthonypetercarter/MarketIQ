@@ -1,6 +1,6 @@
 import { NavBar } from "@/components/shared/NavBar";
 import { AllocationBar } from "@/components/shared/AllocationBar";
-import { TodaysPlaybook } from "@/components/portfolio/TodaysPlaybook";
+import { PortfolioReviewPanel } from "@/components/portfolio/PortfolioReviewPanel";
 import { AllocationComparisonBar } from "@/components/portfolio/AllocationComparisonBar";
 import { PortfolioSummaryStats } from "@/components/portfolio/PortfolioSummaryStats";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
@@ -10,9 +10,9 @@ import {
   computeSectorExposure,
   computeTotalPortfolioValue,
 } from "@/lib/portfolio/allocation";
-import { computeTodaysPlaybook } from "@/lib/portfolio/playbook";
 import { computePortfolioSummary } from "@/lib/portfolio/summary";
 import { getPortfolioWithBriefContext } from "@/lib/data/portfolio";
+import type { StoredPortfolioReviewVerdicts } from "@/lib/council/portfolioReviewTypes";
 
 export default async function PortfolioPage() {
   const data = await getPortfolioWithBriefContext();
@@ -33,7 +33,7 @@ export default async function PortfolioPage() {
     );
   }
 
-  const { portfolio, brief } = data;
+  const { portfolio, brief, portfolioReview } = data;
   const holdings = portfolio.holdings;
   const cashBalance = Number(portfolio.cashBalance);
 
@@ -57,41 +57,47 @@ export default async function PortfolioPage() {
     targetPercent: Number(t.targetPercent),
   }));
 
-  const opportunitiesForCalc = brief.opportunities.map((o) => ({
-    id: o.id,
-    thesis: o.thesis,
-    conviction: o.conviction,
-    companyId: o.companyId,
-    company: o.company
-      ? {
-          id: o.company.id,
-          ticker: o.company.ticker,
-          name: o.company.name,
-          region: o.company.region,
-          currentPrice: Number(o.company.currentPrice),
-        }
-      : null,
-  }));
-
   const totalValue = computeTotalPortfolioValue(holdingsForCalc, cashBalance);
   const currentAllocation = computeCurrentAllocation(holdingsForCalc, cashBalance);
   const gaps = computeAllocationGaps(currentAllocation, allocationTargets);
   const sectorExposure = computeSectorExposure(holdingsForCalc, cashBalance);
   const summary = computePortfolioSummary(holdingsForCalc, cashBalance);
 
-  const playbook = computeTodaysPlaybook({
-    holdings: holdingsForCalc,
-    cashBalance,
-    allocationTargets,
-    opportunities: opportunitiesForCalc,
-    briefDate: brief.date,
-  });
+  const verdicts = portfolioReview
+    ? (portfolioReview.verdicts as unknown as StoredPortfolioReviewVerdicts)
+    : null;
 
   return (
     <>
       <NavBar />
       <main className="mx-auto w-full max-w-[var(--content-width)] flex-1 px-8 py-10 sm:py-16">
-        <TodaysPlaybook playbook={playbook} />
+        {portfolioReview && verdicts ? (
+          <PortfolioReviewPanel
+            narrative={portfolioReview.narrative}
+            existingHoldings={verdicts.existingHoldings}
+            newPositions={verdicts.newPositions}
+            generatedAt={portfolioReview.generatedAt}
+          />
+        ) : (
+          <div className="border-ink-900 border-t pt-6">
+            <div className="text-ink-500 text-eyebrow tracking-[0.08em] uppercase">
+              Portfolio Review
+            </div>
+            <h1 className="text-hero text-ink-900 mt-3 font-serif font-semibold text-balance">
+              No Review Yet Today
+            </h1>
+            <p className="text-dek text-ink-700 mt-5 max-w-[560px] font-serif italic">
+              The Council hasn&rsquo;t reviewed this portfolio against today&rsquo;s Brief yet.
+            </p>
+            <p className="text-ink-500 mt-4 text-[13px]">
+              Run{" "}
+              <code className="bg-ink-100 rounded-sm px-1.5 py-0.5 text-[12px]">
+                npm run council:generate-review
+              </code>{" "}
+              to generate one.
+            </p>
+          </div>
+        )}
 
         <div className="mt-[var(--section-gap)]">
           <h2 className="text-ink-500 text-label tracking-[0.06em] uppercase">
