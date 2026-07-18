@@ -662,3 +662,84 @@ comes:
   with real, AI-generated evidence (rather than today's rule-based thresholds) is a
   meaningfully larger generation surface than one daily candidate. Worth having named that
   now, so it isn't a surprise whenever this actually gets built.
+
+## Architectural Principle: Research Assembly and the Investment Council Are Separate Stages
+
+**Status:** Principle — not scheduled, not a numbered decision. Clarifies the long-term
+architecture; changes no near-term implementation. Discovered while working through
+Portfolio Review, the same way the mechanism above was.
+
+**The pipeline**
+
+```
+Market Data APIs
+      ↓
+Research Assembly
+      ↓
+Research Packet
+      ↓
+Investment Council
+      ↓
+Brief
+      ↓
+Portfolio Review
+      ↓
+Execution Plan
+```
+
+**The insight**
+
+Discovering facts and forming investment judgments are fundamentally different
+responsibilities, and this project had been conflating them without naming it. Research
+Assembly's job is to discover, collect, filter, and organize evidence — Alpaca, FRED,
+earnings, news, fundamentals, an economic calendar, any future provider. It makes no
+investment recommendations; its output is simply "here are today's relevant facts." The
+Investment Council's job is unchanged from the Constitution: interpret that evidence,
+debate it, prioritize, recommend. It never touches a raw API.
+
+This wasn't a new idea introduced from outside the project — it's the missing definition
+for a term decision #5 already used. Decision #5 specified `ResearchPacket →
+SingleCallGenerator → BriefInput` but never actually defined how the `ResearchPacket`
+comes into existence. Research Assembly is that missing upstream stage. It's also already
+true of the one piece of Council automation that actually exists: `callCouncilForPortfolioReview`
+has never touched a raw API — it only ever receives an assembled packet. This principle
+generalizes a rule the codebase already followed once, correctly, before either of us
+named it as a rule.
+
+**The hard boundary, and why it's structural rather than a prompt instruction**
+
+The Council never communicates directly with external APIs, credentials, or data
+sources. By construction — not by instruction — the only evidence it can reason over is
+what Research Assembly provides. This is the same upgrade already made once in this
+project: the leaked-narrative bug (decision #7's addendum) was only genuinely fixed once
+the repair stopped depending on the model's cooperation with a prompt instruction and
+became a structural fact about the code (bracket-matching, not tag-matching, not "please
+don't do this"). "The Council never touches raw APIs" is offered the same upgrade: not a
+stronger prompt, but a literal fact about the module that calls the Council's AI — it
+simply never imports an API client and has no network path to violate.
+
+**Why this boundary outweighs its real costs**
+
+Real costs exist, and were pressure-tested rather than waved away: the packet is a hard
+ceiling on judgment quality within one reasoning pass (no mid-session "check the 2-year
+yield real quick" the way a real committee could); that ceiling creates pressure to
+over-fetch defensively; two systems (Assembly's packet shape, the Council's schema) now
+have to stay in sync deliberately, the same coordination cost already felt firsthand when
+Portfolio Review gained `candidates` and both the packet and the tool schema had to change
+together; and "filtering for significance" inside Research Assembly can quietly become
+investment judgment wearing a research hat if nobody's watching for it.
+
+None of these are new risks this architecture introduces — they're existing tensions
+(already present in today's fully-manual research process) that this architecture makes
+visible and inspectable instead of leaving inside one person's head, unversioned and
+untested. That reframing is why the boundary is worth keeping despite the real cost: for
+MarketIQ specifically, an investment product, **explainability, reproducibility,
+validation, and auditability are more important than allowing the Council to fetch ad hoc
+data mid-reasoning.** This is stated as the reasoning behind a durable rule, not a
+default that's merely gone unchallenged.
+
+**What this does not change**
+
+No near-term implementation. Research Assembly is not being built now. `docs/decisions.md`
+#7's Portfolio Review already complies with this boundary as shipped — nothing here
+requires touching it.
