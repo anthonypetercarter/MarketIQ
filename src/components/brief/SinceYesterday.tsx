@@ -1,4 +1,4 @@
-import type { SinceYesterdayItem } from "@/lib/dashboard/sinceYesterday";
+import type { SinceYesterdayItem } from "@/lib/brief/sinceYesterday";
 
 export function SinceYesterday({ items }: { items: SinceYesterdayItem[] }) {
   return (

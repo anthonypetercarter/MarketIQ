@@ -4,11 +4,12 @@ An Investment Intelligence Platform. The product is the **MarketIQ Brief** — a
 council-produced recommendation designed to feel like it was prepared by an institutional
 investment committee.
 
-This is a founder's-edition MVP. **Sprint 1 and Sprint 2 are complete** — Dashboard, Brief,
-and Portfolio are all built and verified against real seeded data; Companies and Settings
-remain intentional "Coming Soon" placeholders. See `/docs/decisions.md` for the reasoning
-behind key implementation decisions, and the project's governing documents — Constitution,
-MVP Specification, and Sprint 1 Outline — for product philosophy and scope.
+This is a founder's-edition MVP, now well past its original two-sprint scope. Brief and
+Portfolio are the two live pages (Dashboard was retired — `docs/decisions.md` #8);
+Companies and Settings remain intentional "Coming Soon" placeholders. See
+`/docs/decisions.md` for the reasoning behind every real implementation decision, and the
+project's governing documents — Constitution, MVP Specification, and Sprint 1 Outline —
+for product philosophy and scope.
 
 ## Stack
 
@@ -116,45 +117,37 @@ Postgres scripts (`db:up`, `db:down`, `db:logs`, `db:reset`) are listed in
 
 ## Pages
 
-- **`/`** — Dashboard. An executive morning briefing, not a condensed Brief — see
-  `docs/decisions.md` #4. Answers exactly four questions, one section each:
-  Today's Decision (what should I do), Investment Progress (how am I doing),
-  Since Yesterday (what changed — "nothing changed" is a valid, shown result),
-  and Continue Reading (two exits: Brief and Portfolio). Market Outlook,
-  Allocation, Opportunities, and Risks are deliberately absent — they're
-  Brief-exclusive now.
+Two pages now, not three — see `docs/decisions.md` #8 for why Dashboard was retired and
+where its content went. `/` redirects to `/brief`.
+
 - **`/brief`** — the full CIO memo, answering "why should I believe today's
-  recommendation." Today's Decision (with the immediate next action),
-  Executive Summary, full Allocation, Recommended Actions, full Opportunities
-  and Risks (with source traceability), the nine-voice Council Summary, What
-  Would Change Our Mind, Historical Similarity, and the Prepared-by/Approved-by
-  footer.
-- **`/portfolio`** — answers "what does today's recommendation mean for my
-  money," not a tracker. **Portfolio Review** is the hero, per North Star
-  Vision (`docs/decisions.md`): a real Council judgment on the whole real
-  portfolio, generated once per morning — narrative (committee minutes) →
-  New Positions (the actionable conclusion) → Existing Holdings (supporting
-  detail, every position reviewed, only what matters leads). Replaces
-  Today's Playbook (decision #6), which recommended at most one
-  algorithmically-selected trade per day; Portfolio Review lets the Council
-  form independent judgments — `BUY` / `INCREASE` / `HOLD` / `REDUCE` /
-  `EXIT` — across every holding and any number of real, evidenced new
-  positions in one pass. Below it, in supporting order: Allocation vs.
-  Target → Current Holdings → Sector Exposure → Portfolio Summary. See
-  the Portfolio Review section below and `docs/decisions.md` #7 for the
-  full implementation history, including two real production bugs found,
-  fixed, and verified against live data before this UI was built.
+  recommendation." Today's Decision (recommendation, confidence, the immediate next
+  action) → **Since Yesterday** (moved here from the retired Dashboard, positioned right
+  before Executive Summary — every item it reports is a diff of Brief content, so this is
+  Brief's own question, not Portfolio's; "nothing changed" is a valid, shown result) →
+  Executive Summary → full Allocation → Recommended Actions → full Opportunities and
+  Risks (with source traceability) → the nine-voice Council Summary → What Would Change
+  Our Mind → Historical Similarity → the Prepared-by/Approved-by footer.
+- **`/portfolio`** — answers "what does today's recommendation mean for my money," not a
+  tracker. **Portfolio Review** is the hero, per North Star Vision (`docs/decisions.md`):
+  a real Council judgment on the whole real portfolio, generated once per morning —
+  narrative (committee minutes) → New Positions (the actionable conclusion) → Existing
+  Holdings (supporting detail, every position reviewed, only what matters leads). Below
+  it: Allocation vs. Target → Current Holdings → Sector Exposure → **Investment Progress**
+  (moved here from the retired Dashboard, replacing the old separate Portfolio Summary
+  section rather than sitting alongside it — the two showed overlapping numbers). See
+  `docs/decisions.md` #7 for the full Portfolio Review implementation history, including
+  two real production bugs found, fixed, and verified against live data before this UI
+  was built.
 
-`TodaysDecision`'s `immediateAction` is one computed value (the
-`RecommendedAction` with the lowest `displayOrder`) rendered on both Dashboard
-and Brief — one source of truth, two contexts, not two features.
-`src/lib/dashboard/sinceYesterday.ts` diffs two Briefs' recommendation,
-confidence, risks, and actions against the same static portfolio; no
-portfolio snapshots or recommendation history table exist yet (see
-`docs/decisions.md` #3's addendum for why that's still the right call).
-
-`TodaysDecision` is shared between Dashboard and Brief — the Dashboard omits the
-`immediateAction` prop, the Brief supplies it.
+`TodaysDecision`'s `immediateAction` (the `RecommendedAction` with the lowest
+`displayOrder`) is Brief-only now that Dashboard is gone.
+`src/lib/brief/sinceYesterday.ts` diffs two Briefs' recommendation, confidence, risks,
+and actions against the same static portfolio; no portfolio snapshots or recommendation
+history table exist yet (see `docs/decisions.md` #3's addendum for why that's still the
+right call). Its one portfolio-dependent item ("Portfolio Health changed") is why Brief
+now fetches Portfolio data — a deliberate, narrow, documented exception to decision #4's
+Brief/Portfolio separation, not a general loosening of it.
 
 All three routes have a `loading.tsx` (minimal, no spinners — consistent with the editorial
 restraint the rest of the app follows) and an empty state for the pre-seed case.
@@ -312,18 +305,23 @@ sandbox this was built in (see commit history / task notes for details).
 
 ```
 /src
-  /app                    → Next.js routes
+  /app                    → Next.js routes (/, /brief, /portfolio — / redirects to /brief)
   /components
     /ui                    → shadcn/ui primitives
-    /brief                  → Brief-specific presentational components
-    /dashboard               → Dashboard-specific presentational components
-    /portfolio                → Portfolio-specific presentational components
-    /shared                    → Cross-page atoms (VerdictBadge, Dateline, ConfidenceStat, etc.)
+    /brief                  → Brief-specific presentational components (includes Since Yesterday, moved from the retired Dashboard)
+    /portfolio               → Portfolio-specific presentational components (includes Investment Progress, moved from the retired Dashboard)
+    /shared                   → Cross-page atoms (VerdictBadge, Dateline, ConfidenceStat, NavBar, etc.)
   /services
-    /council                 → Empty through Sprint 1, by design — see docs/decisions.md #1
+    /council                 → Still empty, still by design — see docs/decisions.md #1. Real Council
+                                automation ended up living in /lib/council instead once it was actually
+                                built (decision #7); this scaffold predates that and was never the path
+                                that got used.
   /lib                       → DB client (prisma.ts), confidence.ts, labels.ts, formatting helpers
-    /portfolio                 → Rule engine: thresholds.ts, allocation.ts, rules.ts, summary.ts
-    /data                       → Page-level Prisma queries (brief.ts, portfolio.ts)
+    /portfolio                 → Rule engine: thresholds.ts, allocation.ts, rules.ts, summary.ts, playbook.ts
+    /brief                       → sinceYesterday.ts (moved from the retired Dashboard)
+    /council                      → Research packet assembly, the Council's AI call, validation — decision #7
+    /marketdata                    → Alpaca, FRED, Alpaca Trading clients — decision #5's Milestone 1
+    /data                            → Page-level Prisma queries (brief.ts, portfolio.ts)
   /types                      → Empty for now — Prisma's generated types have covered every need so far
   /hooks                       → Shared React hooks
 /prisma                        → schema.prisma, prisma.config.ts, seed.ts; migrations generated locally

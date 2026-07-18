@@ -550,6 +550,63 @@ something to fold silently into a UI swap.
 
 ---
 
+## 8. Dashboard retired — its two unique sections relocated, not deleted
+
+**Status:** Accepted — implemented and verified against real data.
+
+**Context**
+
+Living with the real product surfaced what reviewing mockups couldn't: with Portfolio
+Review now doing real work, Dashboard's Today's Decision was a straight duplicate of
+Brief's, and side-by-side the two pages read as if they weren't telling the same story.
+The founder's read, after actually using it daily: Dashboard no longer earns its place as
+a third page.
+
+**Decision**
+
+Dashboard is retired. `/` redirects to `/brief`, now the closest thing to a "home" page.
+Its two genuinely unique sections were relocated, not deleted:
+
+- **Since Yesterday** moves to the top of Brief, positioned directly before Executive
+  Summary. This is the right home structurally, not just by founder preference: every item
+  it reports — recommendation changed, confidence moved, a risk was added or removed, a
+  recommendation was added or removed — is a diff of _Brief_ content. It's the direct
+  answer to "what changed in why I should believe this," which is Brief's own question
+  under decision #4's three-question split, not Portfolio's.
+- **Investment Progress** moves to Portfolio, replacing the separate "Portfolio Summary"
+  section (`PortfolioSummaryStats`) rather than sitting alongside it — the two showed
+  overlapping numbers (both surfaced Total Value and Today's Change; "Since Starting with
+  MarketIQ" and "Total Return" are the same figure under different names). Running both
+  would have been real duplication on the same page, not two different pieces of
+  information.
+
+**The one real architectural wrinkle, worth stating plainly**
+
+Since Yesterday's "Portfolio Health changed" item is the one part of the diff that
+depends on real holdings data, not just Brief-vs-Brief content. Moving it to Brief means
+Brief now fetches Portfolio — a deliberate, narrow exception to decision #4's
+Brief/Portfolio separation (`getBriefWithSinceYesterday` in `src/lib/data/brief.ts`
+documents this inline). Nothing else on the Brief page touches portfolio data; this is
+the one comparison that genuinely needs it, not a general loosening of the boundary.
+
+**What else came out in the same pass, since dead code doesn't stay dead code once its
+last consumer is gone:** `PortfolioSummaryStats.tsx`, `QuietLink.tsx` (Dashboard's
+"Continue Reading" links, unreferenced once Dashboard was gone), `getLatestBrief()`
+(Dashboard's original Sprint 3 fetcher — already dead before this change; `getDashboardData()`
+had replaced it and nobody noticed the old one was still sitting there), and
+`src/lib/data/dashboard.ts` in full. `NavBar` also lost a real, separate bug while being
+edited for this change: it was hardcoded to always show "Dashboard" as the active nav
+item regardless of which page you were actually on — now a proper client component using
+`usePathname()` to highlight the real current page.
+
+**Verified** against real Postgres data end-to-end: Since Yesterday correctly computing a
+genuine 2-item diff (recommendation changed, confidence moved) between the two real
+Briefs on the Brief page; Investment Progress correctly computing real portfolio value,
+return, and health status on the Portfolio page; confirmed no content duplication between
+the old and new Portfolio sections.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

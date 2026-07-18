@@ -2,7 +2,7 @@ import { NavBar } from "@/components/shared/NavBar";
 import { AllocationBar } from "@/components/shared/AllocationBar";
 import { PortfolioReviewPanel } from "@/components/portfolio/PortfolioReviewPanel";
 import { AllocationComparisonBar } from "@/components/portfolio/AllocationComparisonBar";
-import { PortfolioSummaryStats } from "@/components/portfolio/PortfolioSummaryStats";
+import { InvestmentProgress } from "@/components/portfolio/InvestmentProgress";
 import { HoldingsTable } from "@/components/portfolio/HoldingsTable";
 import {
   computeCurrentAllocation,
@@ -10,6 +10,7 @@ import {
   computeSectorExposure,
   computeTotalPortfolioValue,
 } from "@/lib/portfolio/allocation";
+import { computePortfolioHealth } from "@/lib/portfolio/rules";
 import { computePortfolioSummary } from "@/lib/portfolio/summary";
 import { getPortfolioWithBriefContext } from "@/lib/data/portfolio";
 import type { StoredPortfolioReviewVerdicts } from "@/lib/council/portfolioReviewTypes";
@@ -62,6 +63,7 @@ export default async function PortfolioPage() {
   const gaps = computeAllocationGaps(currentAllocation, allocationTargets);
   const sectorExposure = computeSectorExposure(holdingsForCalc, cashBalance);
   const summary = computePortfolioSummary(holdingsForCalc, cashBalance);
+  const health = computePortfolioHealth(gaps, [], brief.date);
 
   const verdicts = portfolioReview
     ? (portfolioReview.verdicts as unknown as StoredPortfolioReviewVerdicts)
@@ -130,10 +132,7 @@ export default async function PortfolioPage() {
         </div>
 
         <div className="mt-12">
-          <h2 className="text-ink-500 text-label mb-4 tracking-[0.06em] uppercase">
-            Portfolio Summary
-          </h2>
-          <PortfolioSummaryStats summary={summary} />
+          <InvestmentProgress summary={summary} healthStatus={health.status} />
         </div>
       </main>
     </>
