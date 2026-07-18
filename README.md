@@ -247,6 +247,15 @@ Requires `ANTHROPIC_API_KEY` in `.env` (get one at
 both exist — prints the full narrative and every verdict with its evidence to the
 terminal.
 
+**For daily use, run `npm run council:sync-and-review` instead of the individual steps.**
+It chains `data:refresh-prices` → `data:sync-portfolio` → `council:generate-review` in
+that order. This exists because those three running independently is exactly how the
+Council's review and your actual portfolio can silently drift apart — e.g. buying
+something directly in Alpaca and forgetting to sync means Portfolio Review keeps
+recommending a position you already opened. The combined command makes that drift
+harder to cause by accident, not impossible to cause on purpose (you can still run the
+steps individually if you want to).
+
 **UI:** `src/components/portfolio/PortfolioReviewPanel.tsx`, now the hero of `/portfolio`.
 New Positions leads (the actionable conclusion — real trade sizes when the Council
 approved room for them, an honest "no room left today" note when it didn't); Existing

@@ -20,7 +20,8 @@
     "data:refresh-prices": "tsx scripts/refresh-market-data.ts",
     "data:sync-portfolio": "tsx scripts/sync-paper-portfolio.ts",
     "data:verify-fred": "tsx scripts/verify-fred.ts",
-    "council:generate-review": "tsx scripts/generate-portfolio-review.ts"
+    "council:generate-review": "tsx scripts/generate-portfolio-review.ts",
+    "council:sync-and-review": "npm run data:refresh-prices && npm run data:sync-portfolio && npm run council:generate-review"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.1",
