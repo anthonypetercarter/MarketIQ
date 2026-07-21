@@ -12,6 +12,7 @@ export interface HoldingWithCompany {
     currentPrice: number;
     previousClosePrice: number;
     region: "DOMESTIC" | "INTERNATIONAL";
+    assetType: "EQUITY" | "FUND";
   };
 }
 

@@ -89,6 +89,10 @@ in particular:
   portfolio per day; verdicts live in one JSON column, not a child table —
   see the Portfolio Review section below and `docs/decisions.md`'s North
   Star Vision for why.
+- `Company.assetType` (`EQUITY` | `FUND`, defaulting existing rows to
+  `EQUITY`) — funds are a first-class asset type with their own
+  concentration ceiling and evidence standard, not `Company` reused
+  unchanged. See `docs/decisions.md` #9.
 
 Run `npm run db:migrate` to create or update the tables from the schema, then
 `npm run db:seed` to load one realistic day's mock Brief and Portfolio
@@ -225,6 +229,21 @@ position can be approved on the same morning — real, evidenced candidates each
 weighed independently, not artificially capped at one. Approved BUYs are sized against
 a **shared** Excess Cash pool in conviction order (`sizeNewPositionBuys`), so a
 lower-conviction second candidate only gets funded with whatever's left after the first.
+
+**Funds are a first-class asset type, not a stock in disguise** (`docs/decisions.md` #9).
+`Company.assetType` is `EQUITY` or `FUND` — a real CIO's toolkit isn't limited to single
+stocks. A fund still flows through the exact same candidate pipeline UNH and JNJ use, but
+gets a genuinely different, higher concentration ceiling (`FUND_CONCENTRATION_PERCENT`,
+40% vs. 8% for a single equity — a diversified basket doesn't carry one company's
+idiosyncratic risk) and a genuinely different evidence standard (the Council's system
+prompt explicitly expects a fund's thesis to be structural — diversification, sector or
+market positioning — not an earnings-catalyst shape that doesn't exist for a fund).
+Every sizing function reads the right ceiling through one shared
+`getConcentrationCeilingPercent(assetType)` in `playbook.ts` rather than each hardcoding
+it independently. Sector Exposure needed no code changes — it already groups by whatever
+string sits in `Company.sector`; the only requirement is giving a fund an honest value
+like `"Diversified"` rather than forcing it into one industry, documented directly in
+`prisma/schema.prisma`.
 
 Generated **once per real morning**, not on every page load — an LLM call has real
 latency and cost that deterministic portfolio math doesn't, and identical inputs aren't

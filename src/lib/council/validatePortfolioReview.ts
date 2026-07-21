@@ -34,6 +34,7 @@ export interface NewPositionVerdictResult {
   evidence: string[];
   conviction: number;
   currentPrice: number;
+  assetType: "EQUITY" | "FUND";
 }
 
 export interface PortfolioReviewValidationResult {
@@ -266,6 +267,7 @@ export function validatePortfolioReview(
       evidence,
       conviction: candidate.conviction,
       currentPrice: candidate.currentPrice,
+      assetType: candidate.assetType,
     });
   }
 

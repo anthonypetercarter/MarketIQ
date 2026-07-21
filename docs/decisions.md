@@ -607,6 +607,74 @@ the old and new Portfolio sections.
 
 ---
 
+## 9. Funds are a first-class asset type, not `Company` reused unchanged
+
+**Status:** Accepted — implemented and verified against real and synthetic data.
+
+**Context**
+
+Living with the product surfaced a real gap in the Council's toolkit: every real candidate
+so far — ASML, Morgan Stanley, UnitedHealth, Johnson & Johnson — was a single company with
+an earnings-shaped catalyst. A real CIO's toolkit isn't limited to individual stocks; index
+funds and ETFs are a genuine, standard part of building a portfolio, and nothing in the
+system could recommend one.
+
+**Decision**
+
+`Company` gains a real `assetType` field (`EQUITY` | `FUND`), defaulting every existing row
+to `EQUITY`. A fund is still a real `Company` row with a real ticker and price — it flows
+through the exact same candidate pipeline (`assembleResearchPacket` → the Council's single
+call → `sizeNewPositionBuys`) that UNH and JNJ already use. This was deliberately kept
+separate from a different, harder, still-unsolved gap: `Opportunity.thematicTitle` (a
+thesis with no specific ticker, like "AI infrastructure broadly") remains non-actionable,
+unchanged — a fund candidate always resolves to one real, tradeable instrument, which a
+thematic opportunity structurally does not.
+
+**The concentration ceiling is where funds genuinely differ, not a detail**
+
+An 8% ceiling exists because one company carries idiosyncratic risk — a bad quarter, a
+failed product, can hurt that one name specifically. A diversified fund doesn't carry that
+risk the same way; capping it at 8% like a single stock would misrepresent what it actually
+is. `FUND_CONCENTRATION_PERCENT` is set at 40% — real, meaningful room beyond a single
+equity, but still a real, non-zero cap. Even a fully diversified fund shouldn't consume an
+entire day's Excess Cash in one trade; that's a prudence check independent of
+diversification.
+
+Every sizing function — `sizeNewPositionBuys` (live, used by Portfolio Review),
+`computeReduceToConcentrationCeiling`, and decision #6's legacy `computeTodaysPlaybook`
+(kept only for its own verification script, per decision #8) — now reads the ceiling
+through one shared `getConcentrationCeilingPercent(assetType)` function rather than each
+hardcoding `CONCENTRATION_PERCENT` independently, so the two ceilings can't silently drift
+apart from each other in only some of the places that apply them.
+
+**The evidence standard genuinely differs too, not just the math**
+
+The Council's system prompt now says explicitly: a fund's real thesis is structural (broad
+diversification, sector or market positioning), not a single company's earnings or
+guidance. Without this, the Council would either wrongly demand an earnings-catalyst-shaped
+justification that doesn't exist for a fund and never will, or — worse — invent one to fit
+the pattern it's used to seeing. Naming the different evidence bar explicitly closes that
+gap before it could produce a fabricated thesis.
+
+**Sector Exposure needed zero code changes**
+
+`computeSectorExposure` already groups holdings by whatever string sits in `Company.sector`
+— it was already sector-agnostic, not something built for this feature. The only real
+requirement is a data-entry discipline: a fund needs an honest `sector` value like
+`"Diversified"` rather than being forced into one industry it doesn't actually belong to.
+Documented directly in the schema (`prisma/schema.prisma`) so it isn't forgotten the next
+time a fund gets added.
+
+**Verified:** synthetic tests confirming the ceiling lookup itself, a FUND candidate
+correctly sized against 40% rather than 8%, a mixed EQUITY+FUND batch where each candidate
+gets its own real ceiling side by side, and — the test that actually proves the point — the
+identical 15%-of-portfolio position correctly triggering `REDUCE` as an `EQUITY` and
+correctly _not_ triggering it as a `FUND`, purely from the `assetType` tag. Also verified
+end-to-end against real Postgres data: a real fund company flowing correctly through
+`assembleResearchPacket` into the Council's candidate list, tagged `FUND` throughout.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

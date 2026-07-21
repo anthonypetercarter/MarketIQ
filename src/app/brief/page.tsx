@@ -54,6 +54,7 @@ export default async function BriefPage() {
         currentPrice: Number(h.company.currentPrice),
         previousClosePrice: Number(h.company.previousClosePrice),
         region: h.company.region,
+        assetType: h.company.assetType,
       },
     }));
     const cashBalance = Number(portfolio.cashBalance);

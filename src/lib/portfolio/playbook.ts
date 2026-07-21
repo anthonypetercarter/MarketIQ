@@ -17,6 +17,19 @@ import type { HoldingWithCompany, AllocationTargetLike, AllocationGap } from "./
 import type { PortfolioHealth } from "./rules";
 
 /**
+ * A FUND holding doesn't carry one company's idiosyncratic risk, so it
+ * gets a real, higher concentration ceiling than a single EQUITY — see
+ * docs/decisions.md for the reasoning. Every sizing function below reads
+ * the ceiling through this one function rather than hardcoding
+ * CONCENTRATION_PERCENT, so the two ceilings can't silently drift apart.
+ */
+export function getConcentrationCeilingPercent(assetType: "EQUITY" | "FUND"): number {
+  return assetType === "FUND"
+    ? PORTFOLIO_THRESHOLDS.FUND_CONCENTRATION_PERCENT
+    : PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT;
+}
+
+/**
  * Excess Cash = Current Cash − Target Cash (in dollars).
  *
  * Target Cash is expressed as a percentage of total portfolio value in
@@ -42,6 +55,7 @@ interface OpportunityCompany {
   ticker: string;
   name: string;
   region: "DOMESTIC" | "INTERNATIONAL";
+  assetType: "EQUITY" | "FUND";
   currentPrice: number;
 }
 
@@ -70,7 +84,8 @@ export function computeReduceToConcentrationCeiling(
   totalPortfolioValue: number,
 ): HoldingSizing | null {
   const currentValue = marketValue(holding);
-  const ceilingValue = (PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT / 100) * totalPortfolioValue;
+  const ceilingPercent = getConcentrationCeilingPercent(holding.company.assetType);
+  const ceilingValue = (ceilingPercent / 100) * totalPortfolioValue;
   if (currentValue <= ceilingValue) return null;
 
   const excessValue = currentValue - ceilingValue;
@@ -194,6 +209,7 @@ function withSimulatedTrade(
         currentPrice: company.currentPrice,
         previousClosePrice: company.currentPrice,
         region: company.region,
+        assetType: company.assetType,
       },
     },
   ];
@@ -244,8 +260,6 @@ export function computeTodaysPlaybook(input: {
     };
   }
 
-  const ceilingValue = (PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT / 100) * totalValue;
-
   const candidates = opportunities
     .filter((o): o is OpportunityCandidate & { company: OpportunityCompany } => Boolean(o.company))
     .map((o) => {
@@ -253,11 +267,12 @@ export function computeTodaysPlaybook(input: {
       const gap = underweightGaps.find((g) => g.category === category);
       const existingHolding = holdings.find((h) => h.company.id === o.companyId);
       const currentPositionValue = existingHolding ? marketValue(existingHolding) : 0;
-      return { opportunity: o, category, gap, currentPositionValue };
+      const ceilingValue = (getConcentrationCeilingPercent(o.company.assetType) / 100) * totalValue;
+      return { opportunity: o, category, gap, currentPositionValue, ceilingValue };
     })
     .filter(
       (c): c is typeof c & { gap: AllocationGap } =>
-        c.gap !== undefined && c.currentPositionValue < ceilingValue,
+        c.gap !== undefined && c.currentPositionValue < c.ceilingValue,
     )
     .sort((a, b) => b.opportunity.conviction - a.opportunity.conviction);
 
@@ -270,7 +285,7 @@ export function computeTodaysPlaybook(input: {
   }
 
   for (const candidate of candidates) {
-    const { opportunity, category, gap, currentPositionValue } = candidate;
+    const { opportunity, category, gap, currentPositionValue, ceilingValue } = candidate;
     const company = opportunity.company;
 
     const gapClosingValue = (Math.abs(gap.gapPoints!) / 100) * totalValue;
@@ -306,7 +321,7 @@ export function computeTodaysPlaybook(input: {
     );
     const sizingExplanation = explainSizing(
       bindingConstraint,
-      PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT,
+      getConcentrationCeilingPercent(company.assetType),
       excessCash,
       category,
     );
@@ -375,12 +390,16 @@ export interface NewPositionTrade {
  * share, and processing continues to the next one rather than stopping.
  */
 export function sizeNewPositionBuys(input: {
-  candidates: { ticker: string; companyName: string; currentPrice: number }[];
+  candidates: {
+    ticker: string;
+    companyName: string;
+    currentPrice: number;
+    assetType: "EQUITY" | "FUND";
+  }[];
   excessCash: number;
   totalPortfolioValue: number;
 }): NewPositionTrade[] {
   const { candidates, excessCash, totalPortfolioValue } = input;
-  const ceilingValue = (PORTFOLIO_THRESHOLDS.CONCENTRATION_PERCENT / 100) * totalPortfolioValue;
 
   let remainingCash = excessCash;
   const trades: NewPositionTrade[] = [];
@@ -389,7 +408,10 @@ export function sizeNewPositionBuys(input: {
     if (remainingCash <= 0) break;
 
     // A brand-new position starts at zero, so the concentration ceiling
-    // itself is the room available — no existing value to subtract.
+    // itself is the room available — no existing value to subtract. Each
+    // candidate's own asset type determines which ceiling applies.
+    const ceilingValue =
+      (getConcentrationCeilingPercent(candidate.assetType) / 100) * totalPortfolioValue;
     const sizeDollars = Math.min(remainingCash, ceilingValue);
     const shares = Math.floor(sizeDollars / candidate.currentPrice);
     if (shares < 1) continue;

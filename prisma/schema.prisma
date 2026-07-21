@@ -75,6 +75,15 @@ enum CompanyRegion {
   INTERNATIONAL
 }
 
+/// A real CIO's toolkit isn't limited to single stocks — funds carry
+/// fundamentally different risk (diversified vs. one company's
+/// idiosyncratic risk), which is why this is a first-class distinction
+/// rather than folding funds into Company unchanged. See docs/decisions.md.
+enum AssetType {
+  EQUITY
+  FUND
+}
+
 // -----------------------------------------------------------------------------
 // Core entities
 // -----------------------------------------------------------------------------
@@ -125,6 +134,10 @@ model Company {
   id     String @id @default(cuid())
   ticker String @unique
   name   String
+  /// For assetType=FUND, use an honest value like "Diversified" rather than
+  /// forcing a single industry — Sector Exposure groups by this value
+  /// as-is, so a fund correctly gets its own bucket without any special
+  /// handling, as long as it isn't given a misleading single-sector label.
   sector String
 
   /// Sprint 2 additions — mocked for now, same spirit as the Council's
@@ -134,6 +147,10 @@ model Company {
   currentPrice       Decimal       @db.Decimal(18, 4)
   previousClosePrice Decimal       @db.Decimal(18, 4)
   region             CompanyRegion
+  /// EQUITY for single companies, FUND for ETFs/index funds — changes the
+  /// concentration ceiling applied and the evidence standard the Council
+  /// holds a candidate to. Defaults to EQUITY for every pre-existing row.
+  assetType          AssetType     @default(EQUITY)
 
   holdings           Holding[]
   opportunities      Opportunity[]

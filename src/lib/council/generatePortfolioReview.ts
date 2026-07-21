@@ -99,6 +99,15 @@ function buildSystemPrompt(): string {
       "optional: most mornings, no new position is warranted. Only recommend one when the evidence — the " +
       "candidate's real thesis and conviction, weighed against the portfolio's real allocation gaps — " +
       "genuinely supports it, the same standard as every other verdict.",
+    "- A real CIO's toolkit isn't limited to individual stocks — some holdings and candidates in this " +
+      "packet are FUNDs (ETFs, index funds), marked by their assetType field, not just EQUITY. Judge them " +
+      "by a genuinely different, still real standard: a fund's real thesis is structural (broad " +
+      "diversification, sector or market positioning) rather than a single company's earnings or " +
+      "guidance — don't require an earnings-beat-style catalyst to justify a fund the way you would for a " +
+      "single stock, since that evidence doesn't exist for a fund and never will. A FUND also carries a " +
+      "materially higher concentration ceiling than an EQUITY, reflecting that a diversified basket " +
+      "doesn't carry one company's idiosyncratic risk — this is already reflected in the sizing math " +
+      "downstream, not something you need to account for yourself.",
   ].join("\n");
 }
 

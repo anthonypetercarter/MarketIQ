@@ -52,6 +52,7 @@ async function main() {
       currentPrice: Number(h.company.currentPrice),
       previousClosePrice: Number(h.company.previousClosePrice),
       region: h.company.region,
+      assetType: h.company.assetType,
     },
   }));
 
