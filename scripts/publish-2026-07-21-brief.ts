@@ -62,6 +62,7 @@ async function main() {
       currentPrice: 431.34,
       previousClosePrice: 423.34,
       region: "DOMESTIC",
+      assetType: "EQUITY",
     },
   });
 
@@ -77,6 +78,30 @@ async function main() {
       currentPrice: 168.5,
       previousClosePrice: 166.9,
       region: "DOMESTIC",
+      assetType: "EQUITY",
+    },
+  });
+
+  // The first real FUND candidate, per decision #9 — a real, current,
+  // cross-sourced small-cap value rotation thesis, not a single company's
+  // earnings. Note: one source claimed small-cap value trades near 14x
+  // forward earnings vs. the S&P 500's ~22x, but VBR's own stated P/E
+  // (21.84) contradicts that specific figure — left out of the thesis
+  // below rather than papered over. What's consistently confirmed across
+  // sources instead: VBR's own real 16.43% YTD return, a specific, dated
+  // analyst reconsideration (Motley Fool, July 15, 2026), and genuine
+  // broad diversification (852 holdings, no sector above ~19%).
+  const vbr = await prisma.company.upsert({
+    where: { ticker: "VBR" },
+    update: {},
+    create: {
+      ticker: "VBR",
+      name: "Vanguard Small-Cap Value ETF",
+      sector: "Diversified",
+      currentPrice: 242.06,
+      previousClosePrice: 244.12,
+      region: "DOMESTIC",
+      assetType: "FUND",
     },
   });
 
@@ -116,9 +141,16 @@ async function main() {
     "empty for now — industrials had only generic sector-level strength with no standout " +
     "company-specific catalyst, and the energy majors don't report Q2 results until early " +
     "August, so despite the sector's headline gains this year, there's no fresh, current " +
-    "evidence there yet. On balance: real improvement, held to Maintain Current Allocation " +
-    "rather than chased into Increase, with this week's earnings as the next real test of " +
-    "whether today's rebound has legs.";
+    "evidence there yet. This Brief also names, for the first time, a real fund-level " +
+    "opportunity alongside its single-stock candidates: the small-cap breadth already " +
+    "discussed above (small-caps up 19% year-to-date, equal-weight beating cap-weighted) " +
+    "is real enough on its own to be worth structural exposure, not just a data point about " +
+    "market character. The Vanguard Small-Cap Value ETF has genuinely outperformed this " +
+    "year and drew a real, dated analyst reconsideration on July 15 — though one specific " +
+    "valuation claim behind that thesis didn't hold up under a second check and was left " +
+    "out rather than repeated. On balance: real improvement, held to Maintain Current " +
+    "Allocation rather than chased into Increase, with this week's earnings as the next " +
+    "real test of whether today's rebound has legs.";
 
   const historicalSimilarityNarrative =
     "A different kind of test than Monday's walk-back: does the process resist over-reacting " +
@@ -178,10 +210,13 @@ async function main() {
         "four days, led by chipmakers specifically — Samsung and TSMC both gained more than " +
         "2.5%, and US chip names were reviving in early trading too. This doesn't undo last " +
         "week's technical bear market on its own, but it's the first real counter-evidence " +
-        "since the selloff began.",
+        "since the selloff began. Separately, the small-cap breadth I've been noting for " +
+        "weeks is real enough now to be worth naming as its own structural opportunity, not " +
+        "just a data point: VBR's real 16.43% year-to-date return and a genuine, dated " +
+        "analyst reconsideration on July 15 both point the same direction.",
       confidenceScore: 62,
       rationale:
-        "A rebound led specifically by the same names that broke down is more meaningful than a broad, unfocused bounce would be.",
+        "A rebound led specifically by the same names that broke down is more meaningful than a broad, unfocused bounce would be, and structural breadth strength deserves its own line of evidence rather than staying an aside.",
       risksNoted:
         "One day of gains after a multi-week decline isn't yet a trend — worth confirming over more than one session before treating this as resolved.",
       changeTrigger:
@@ -384,6 +419,27 @@ async function main() {
         "fell — the original thesis stands unrefuted.",
       conviction: 58,
       companyId: ms.id,
+    },
+  });
+
+  await prisma.opportunity.create({
+    data: {
+      briefId: brief.id,
+      thesis:
+        "A real, structural thesis, not an earnings catalyst — the first fund-level " +
+        "opportunity this Brief has ever named. Small-cap value has genuinely outperformed " +
+        "in 2026: VBR's own real year-to-date return is 16.43%, and a specific, dated " +
+        "analyst reconsideration on July 15 explicitly reversed a prior underweight " +
+        "position on small-caps given the size of the rally. The fund itself is genuinely " +
+        "diversified — 852 real holdings, no single sector above roughly 19% — which is " +
+        "exactly the kind of broad, structural positioning a single stock can't offer. " +
+        "Worth being honest about one real limit to this thesis: one source claimed " +
+        "small-cap value trades near 14x forward earnings against the S&P 500's 22x, but " +
+        "VBR's own currently stated P/E (21.84) doesn't support that specific figure, so " +
+        "the valuation argument is left out rather than asserted on a claim that doesn't " +
+        "hold up under a second check.",
+      conviction: 52,
+      companyId: vbr.id,
     },
   });
 
