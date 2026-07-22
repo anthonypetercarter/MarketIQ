@@ -4,6 +4,11 @@
  * Per North Star Vision (docs/decisions.md): generated once, published,
  * then read (not regenerated) on every subsequent page load.
  *
+ * Today's Actions unifies every real, sized move the Council approved:
+ * new positions (BUY), additions to existing ones (INCREASE), and
+ * concentration-driven trims or full exits (REDUCE/EXIT) — the first time
+ * all four verdict types get real trade sizing, not just brand-new BUYs.
+ *
  * Requires ANTHROPIC_API_KEY in .env. Run with:
  *   npx tsx scripts/generate-portfolio-review.ts
  */
@@ -15,12 +20,21 @@ import {
   computeCurrentAllocation,
   computeAllocationGaps,
   computeTotalPortfolioValue,
+  marketValue,
 } from "../src/lib/portfolio/allocation";
-import { computeExcessCash, sizeNewPositionBuys } from "../src/lib/portfolio/playbook";
+import {
+  computeExcessCash,
+  sizeApprovedBuys,
+  computeReduceToConcentrationCeiling,
+  computeExitSizing,
+} from "../src/lib/portfolio/playbook";
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
 import { callCouncilForPortfolioReview } from "../src/lib/council/generatePortfolioReview";
 import { validatePortfolioReview } from "../src/lib/council/validatePortfolioReview";
-import type { StoredPortfolioReviewVerdicts } from "../src/lib/council/portfolioReviewTypes";
+import type {
+  StoredPortfolioReviewVerdicts,
+  TodaysAction,
+} from "../src/lib/council/portfolioReviewTypes";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -65,6 +79,7 @@ async function main() {
       assetType: h.company.assetType,
     },
   }));
+  const holdingByTicker = new Map(holdingsForCalc.map((h) => [h.company.ticker, h]));
 
   const cashBalance = Number(portfolio.cashBalance);
   const currentAllocation = computeCurrentAllocation(holdingsForCalc, cashBalance);
@@ -92,6 +107,7 @@ async function main() {
               name: o.company.name,
               currentPrice: Number(o.company.currentPrice),
               region: o.company.region,
+              assetType: o.company.assetType,
             }
           : null,
         thematicTitle: o.thematicTitle,
@@ -118,24 +134,102 @@ async function main() {
   const cashTargetPercent = gaps.find((g) => g.category === "Cash")?.targetPercent ?? 0;
   const excessCash = computeExcessCash(totalPortfolioValue, cashBalance, cashTargetPercent);
 
-  const newPositionTrades = sizeNewPositionBuys({
-    candidates: result.newPositionVerdicts,
+  // Buy-side: INCREASE (existing holdings) get priority over brand-new BUY
+  // candidates for the same shared cash pool — reinforcing an already-vetted
+  // position ahead of opening a new one. A real, explicit choice, not an
+  // accident of array order; easy to revisit if it produces the wrong call
+  // in practice.
+  const increaseVerdicts = result.verdicts.filter((v) => v.verdict === "INCREASE" && v.validated);
+  const increaseCandidates = increaseVerdicts.flatMap((v) => {
+    const holding = holdingByTicker.get(v.ticker);
+    if (!holding) return [];
+    return [
+      {
+        ticker: holding.company.ticker,
+        companyName: holding.company.name,
+        currentPrice: holding.company.currentPrice,
+        assetType: holding.company.assetType,
+        currentValue: marketValue(holding),
+      },
+    ];
+  });
+  const newBuyCandidates = result.newPositionVerdicts.map((v) => ({
+    ticker: v.ticker,
+    companyName: v.companyName,
+    currentPrice: v.currentPrice,
+    assetType: v.assetType,
+    currentValue: 0,
+  }));
+
+  const buyTrades = sizeApprovedBuys({
+    candidates: [...increaseCandidates, ...newBuyCandidates],
     excessCash,
     totalPortfolioValue,
   });
-  const tradeByTicker = new Map(newPositionTrades.map((t) => [t.ticker, t]));
+  const buyTradeByTicker = new Map(buyTrades.map((t) => [t.ticker, t]));
 
-  const newPositions = result.newPositionVerdicts.map((v) => ({
-    ticker: v.ticker,
-    companyName: v.companyName,
-    verdict: "BUY" as const,
-    evidence: v.evidence,
-    trade: tradeByTicker.get(v.ticker) ?? null, // null = Council approved it, but no room/cash to size it today
-  }));
+  const todaysActions: TodaysAction[] = [];
+
+  for (const v of increaseVerdicts) {
+    todaysActions.push({
+      ticker: v.ticker,
+      companyName: v.companyName,
+      verdict: "INCREASE",
+      evidence: v.evidence,
+      side: "BUY",
+      trade: buyTradeByTicker.get(v.ticker) ?? null,
+    });
+  }
+
+  for (const v of result.newPositionVerdicts) {
+    todaysActions.push({
+      ticker: v.ticker,
+      companyName: v.companyName,
+      verdict: "BUY",
+      evidence: v.evidence,
+      side: "BUY",
+      trade: buyTradeByTicker.get(v.ticker) ?? null,
+    });
+  }
+
+  // Sell-side: REDUCE only produces a real trade when the position is
+  // actually over its own concentration ceiling — a qualitative REDUCE
+  // issued for a different reason has no mechanical trim to compute yet,
+  // and is shown honestly as such rather than guessed at. EXIT is always
+  // computable (full liquidation).
+  const reduceVerdicts = result.verdicts.filter((v) => v.verdict === "REDUCE" && v.validated);
+  for (const v of reduceVerdicts) {
+    const holding = holdingByTicker.get(v.ticker);
+    const trade = holding
+      ? computeReduceToConcentrationCeiling(holding, totalPortfolioValue)
+      : null;
+    todaysActions.push({
+      ticker: v.ticker,
+      companyName: v.companyName,
+      verdict: "REDUCE",
+      evidence: v.evidence,
+      side: "SELL",
+      trade,
+    });
+  }
+
+  const exitVerdicts = result.verdicts.filter((v) => v.verdict === "EXIT" && v.validated);
+  for (const v of exitVerdicts) {
+    const holding = holdingByTicker.get(v.ticker);
+    const trade = holding ? computeExitSizing(holding) : null;
+    todaysActions.push({
+      ticker: v.ticker,
+      companyName: v.companyName,
+      verdict: "EXIT",
+      evidence: v.evidence,
+      side: "SELL",
+      trade,
+    });
+  }
 
   const storedVerdicts: StoredPortfolioReviewVerdicts = {
     existingHoldings: result.verdicts,
-    newPositions,
+    todaysActions,
   };
 
   const review = await prisma.portfolioReview.upsert({
@@ -162,21 +256,31 @@ async function main() {
     for (const e of v.evidence) console.log(`    - ${e}`);
   }
 
-  if (newPositions.length === 0) {
-    console.log("\nNew Positions: none recommended today.");
+  if (todaysActions.length === 0) {
+    console.log("\nToday's Actions: none recommended today.");
   } else {
-    console.log("\nNew Positions:");
-    for (const p of newPositions) {
-      console.log(`  ${p.ticker} (${p.companyName}): BUY`);
-      for (const e of p.evidence) console.log(`    - ${e}`);
-      if (p.trade) {
-        console.log(
-          `    -> Buy ${p.trade.shares} shares (~$${p.trade.estimatedPricePerShare}/share, ~$${p.trade.estimatedCost.toFixed(2)} total)`,
-        );
+    console.log("\nToday's Actions:");
+    for (const a of todaysActions) {
+      console.log(`  ${a.ticker} (${a.companyName}): ${a.verdict}`);
+      for (const e of a.evidence) console.log(`    - ${e}`);
+      if (a.side === "BUY") {
+        if (a.trade) {
+          console.log(
+            `    -> Buy ${a.trade.shares} shares (~$${a.trade.estimatedPricePerShare}/share, ~$${a.trade.estimatedCost.toFixed(2)} total)`,
+          );
+        } else {
+          console.log(`    -> Approved, but no Excess Cash/room left to size it today.`);
+        }
       } else {
-        console.log(
-          `    -> Approved by the Council, but no Excess Cash/room left to size it today.`,
-        );
+        if (a.trade) {
+          console.log(
+            `    -> Sell ${a.trade.sharesToSell} shares (~$${a.trade.estimatedProceeds.toFixed(2)} proceeds)`,
+          );
+        } else {
+          console.log(
+            `    -> Council recommended REDUCE, but this position isn't currently over its concentration ceiling — no mechanical trim computed.`,
+          );
+        }
       }
     }
   }

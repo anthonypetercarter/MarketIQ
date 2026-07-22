@@ -78,7 +78,7 @@ export default async function PortfolioPage() {
           <PortfolioReviewPanel
             narrative={portfolioReview.narrative}
             existingHoldings={verdicts.existingHoldings}
-            newPositions={verdicts.newPositions}
+            todaysActions={verdicts.todaysActions}
             generatedAt={portfolioReview.generatedAt}
           />
         ) : (

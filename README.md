@@ -135,12 +135,14 @@ where its content went. `/` redirects to `/brief`.
 - **`/portfolio`** — answers "what does today's recommendation mean for my money," not a
   tracker. **Portfolio Review** is the hero, per North Star Vision (`docs/decisions.md`):
   a real Council judgment on the whole real portfolio, generated once per morning —
-  narrative (committee minutes) → New Positions (the actionable conclusion) → Existing
-  Holdings (supporting detail, every position reviewed, only what matters leads). Below
-  it: Allocation vs. Target → Current Holdings → Sector Exposure → **Investment Progress**
-  (moved here from the retired Dashboard, replacing the old separate Portfolio Summary
-  section rather than sitting alongside it — the two showed overlapping numbers). See
-  `docs/decisions.md` #7 for the full Portfolio Review implementation history, including
+  narrative (committee minutes) → **Today's Actions** (every real, sized move — new
+  positions, additions to existing ones, concentration-driven trims, full exits — the
+  actionable conclusion) → Existing Holdings (supporting detail, every position reviewed,
+  only what matters leads). Below it: Allocation vs. Target → Current Holdings → Sector
+  Exposure → **Investment Progress** (moved here from the retired Dashboard, replacing the
+  old separate Portfolio Summary section rather than sitting alongside it — the two showed
+  overlapping numbers). See `docs/decisions.md` #7 for the full Portfolio Review
+  implementation history, including
   two real production bugs found, fixed, and verified against live data before this UI
   was built.
 
@@ -215,7 +217,7 @@ than a trade list.
   malformed or unvalidatable verdict degrades to a safe `HOLD` for that holding alone,
   never invalidates the other real verdicts, never throws.
 - `src/lib/portfolio/playbook.ts` also gained `computeReduceToConcentrationCeiling`,
-  `computeExitSizing`, and `sizeNewPositionBuys` — the only genuinely new deterministic
+  `computeExitSizing`, and `sizeApprovedBuys` — the only genuinely new deterministic
   math this feature needed. The AI decides the verdict; these functions turn a verdict
   into a real share count, the same separation of responsibility Today's Playbook
   already established for `BUY`/`INCREASE`.
@@ -227,8 +229,11 @@ so the Council can recommend starting a position, not only judge what's already 
 `REDUCE`d); anything else is discarded, not guessed at. Zero, one, or more than one new
 position can be approved on the same morning — real, evidenced candidates each get
 weighed independently, not artificially capped at one. Approved BUYs are sized against
-a **shared** Excess Cash pool in conviction order (`sizeNewPositionBuys`), so a
+a **shared** Excess Cash pool in conviction order (`sizeApprovedBuys`), so a
 lower-conviction second candidate only gets funded with whatever's left after the first.
+`INCREASE` on an existing holding shares this exact mechanism — same shared pool, same
+concentration ceiling — starting from the position's real current value instead of $0
+(`docs/decisions.md` #7's addendum).
 
 **Funds are a first-class asset type, not a stock in disguise** (`docs/decisions.md` #9).
 `Company.assetType` is `EQUITY` or `FUND` — a real CIO's toolkit isn't limited to single
@@ -269,11 +274,15 @@ harder to cause by accident, not impossible to cause on purpose (you can still r
 steps individually if you want to).
 
 **UI:** `src/components/portfolio/PortfolioReviewPanel.tsx`, now the hero of `/portfolio`.
-New Positions leads (the actionable conclusion — real trade sizes when the Council
-approved room for them, an honest "no room left today" note when it didn't); Existing
-Holdings follows as supporting detail. An empty state prompts running the generation
-script when no review exists yet for today's Brief. No execution buttons anywhere — the
-same "MarketIQ proposes, never places an order" boundary as everywhere else in this app.
+**Today's Actions** leads — every real, sized move the Council approved: new positions
+(`BUY`), additions to existing ones (`INCREASE`), concentration-driven trims (`REDUCE`),
+full exits (`EXIT`), each with a real trade size when one exists, or an honest "why not"
+note when it doesn't (no room/cash left; or, for a qualitative `REDUCE` not backed by a
+concentration breach, no mechanical trim to compute). Existing Holdings follows as
+supporting detail — a position can appear in both, intentionally: full evidence there,
+the real trade here. An empty state prompts running the generation script when no review
+exists yet for today's Brief. No execution buttons anywhere — the same "MarketIQ
+proposes, never places an order" boundary as everywhere else in this app.
 
 **Two real production bugs, found and fixed against live output, not caught in
 synthetic testing:** the model twice leaked its full structured response — narrative

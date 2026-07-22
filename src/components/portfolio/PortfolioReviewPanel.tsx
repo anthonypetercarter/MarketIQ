@@ -1,5 +1,5 @@
 import type { HoldingVerdictResult } from "@/lib/council/validatePortfolioReview";
-import type { StoredNewPositionVerdict } from "@/lib/council/portfolioReviewTypes";
+import type { TodaysAction } from "@/lib/council/portfolioReviewTypes";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
@@ -28,15 +28,49 @@ function EvidenceList({ evidence }: { evidence: string[] }) {
   );
 }
 
+function ActionTradeLine({ action }: { action: TodaysAction }) {
+  if (action.side === "BUY") {
+    if (action.trade) {
+      return (
+        <p className="text-ink-900 mt-2 font-mono text-[13px]">
+          → Buy {action.trade.shares} shares (~{formatCurrency(action.trade.estimatedPricePerShare)}
+          /share, ~{formatCurrency(action.trade.estimatedCost)} total)
+        </p>
+      );
+    }
+    return (
+      <p className="text-ink-500 mt-2 text-[13px]">
+        Approved by the Council, but no Excess Cash or concentration room was left to size it today.
+      </p>
+    );
+  }
+
+  if (action.trade) {
+    return (
+      <p className="text-ink-900 mt-2 font-mono text-[13px]">
+        → Sell {action.trade.sharesToSell} shares (~{formatCurrency(action.trade.estimatedProceeds)}{" "}
+        proceeds)
+      </p>
+    );
+  }
+  return (
+    <p className="text-ink-500 mt-2 text-[13px]">
+      The Council recommended reducing this position, but it isn&rsquo;t currently over its
+      concentration ceiling — there&rsquo;s no mechanical trim to compute for a qualitative reason
+      like this yet.
+    </p>
+  );
+}
+
 export function PortfolioReviewPanel({
   narrative,
   existingHoldings,
-  newPositions,
+  todaysActions,
   generatedAt,
 }: {
   narrative: string;
   existingHoldings: HoldingVerdictResult[];
-  newPositions: StoredNewPositionVerdict[];
+  todaysActions: TodaysAction[];
   generatedAt: Date;
 }) {
   return (
@@ -61,33 +95,24 @@ export function PortfolioReviewPanel({
       </p>
 
       <div className="mt-8">
-        <h2 className="text-ink-500 text-label tracking-[0.06em] uppercase">New Positions</h2>
-        {newPositions.length === 0 ? (
-          <p className="text-ink-700 mt-3 text-[14px]">No new positions recommended today.</p>
+        <h2 className="text-ink-500 text-label tracking-[0.06em] uppercase">
+          Today&rsquo;s Actions
+        </h2>
+        {todaysActions.length === 0 ? (
+          <p className="text-ink-700 mt-3 text-[14px]">No actions recommended today.</p>
         ) : (
           <div className="border-ink-200 mt-3 divide-y divide-[var(--color-ink-200)] border-t">
-            {newPositions.map((position) => (
-              <div key={position.ticker} className="py-5">
+            {todaysActions.map((action) => (
+              <div key={`${action.ticker}-${action.verdict}`} className="py-5">
                 <div className="flex items-baseline justify-between">
                   <div className="text-ink-900 text-[16px] font-semibold">
-                    {position.ticker}{" "}
-                    <span className="text-ink-500 font-normal">({position.companyName})</span>
+                    {action.ticker}{" "}
+                    <span className="text-ink-500 font-normal">({action.companyName})</span>
                   </div>
-                  <div className="text-ink-900 text-[13px]">{VERDICT_LABEL[position.verdict]}</div>
+                  <div className="text-ink-900 text-[13px]">{VERDICT_LABEL[action.verdict]}</div>
                 </div>
-                <EvidenceList evidence={position.evidence} />
-                {position.trade ? (
-                  <p className="text-ink-900 mt-2 font-mono text-[13px]">
-                    → Buy {position.trade.shares} shares (~
-                    {formatCurrency(position.trade.estimatedPricePerShare)}/share, ~
-                    {formatCurrency(position.trade.estimatedCost)} total)
-                  </p>
-                ) : (
-                  <p className="text-ink-500 mt-2 text-[13px]">
-                    Approved by the Council, but no Excess Cash or concentration room was left to
-                    size it today.
-                  </p>
-                )}
+                <EvidenceList evidence={action.evidence} />
+                <ActionTradeLine action={action} />
               </div>
             ))}
           </div>

@@ -367,13 +367,15 @@ export function computeTodaysPlaybook(input: {
 }
 
 // -----------------------------------------------------------------------------
-// Portfolio Review — sizing for Council-selected new-position BUY verdicts.
-// The Council decides WHICH candidates deserve a BUY (a judgment call); this
-// turns that decision into real share counts, reusing the same Excess Cash
-// and concentration-ceiling math already proven in computeTodaysPlaybook.
+// Portfolio Review — sizing for Council-approved BUY-side verdicts (both
+// brand-new positions and increases to existing ones), and for SELL-side
+// verdicts (Reduce, Exit) on existing holdings. The Council decides WHICH
+// verdict a holding deserves (a judgment call); these functions turn that
+// decision into real share counts, reusing the same Excess Cash and
+// concentration-ceiling math already proven in computeTodaysPlaybook.
 // -----------------------------------------------------------------------------
 
-export interface NewPositionTrade {
+export interface BuyTrade {
   ticker: string;
   companyName: string;
   shares: number;
@@ -382,37 +384,48 @@ export interface NewPositionTrade {
 }
 
 /**
- * Sizes one or more Council-approved new-position BUY verdicts against a
- * shared, finite Excess Cash pool. Processes candidates in the order given
- * (callers should pass them highest-conviction-first) — each trade spends
- * from the same remaining balance, so earlier candidates get first claim.
- * A candidate is skipped (not zero-sized) if there isn't room for even one
- * share, and processing continues to the next one rather than stopping.
+ * Sizes one or more Council-approved BUY-side verdicts — brand-new
+ * positions (BUY) and additions to existing ones (INCREASE) — against a
+ * shared, finite Excess Cash pool. Both are the same real operation (spend
+ * cash to build a position up toward its concentration ceiling); the only
+ * difference is the starting point: 0 for a new position, the position's
+ * real current value for an increase. Processes candidates in the order
+ * given (callers decide priority — see generate-portfolio-review.ts for
+ * the real ordering used) — each trade spends from the same remaining
+ * balance, so earlier candidates get first claim. A candidate is skipped
+ * (not zero-sized) if there isn't room for even one share, and processing
+ * continues to the next one rather than stopping.
  */
-export function sizeNewPositionBuys(input: {
+export function sizeApprovedBuys(input: {
   candidates: {
     ticker: string;
     companyName: string;
     currentPrice: number;
     assetType: "EQUITY" | "FUND";
+    /** 0 for a brand-new position; the real current market value for an existing one being increased. */
+    currentValue: number;
   }[];
   excessCash: number;
   totalPortfolioValue: number;
-}): NewPositionTrade[] {
+}): BuyTrade[] {
   const { candidates, excessCash, totalPortfolioValue } = input;
 
   let remainingCash = excessCash;
-  const trades: NewPositionTrade[] = [];
+  const trades: BuyTrade[] = [];
 
   for (const candidate of candidates) {
     if (remainingCash <= 0) break;
 
-    // A brand-new position starts at zero, so the concentration ceiling
-    // itself is the room available — no existing value to subtract. Each
-    // candidate's own asset type determines which ceiling applies.
+    // Room available is the ceiling minus whatever's already there — 0 for
+    // a new position (full ceiling is room), a real amount for an existing
+    // one being increased. Each candidate's own asset type determines
+    // which ceiling applies.
     const ceilingValue =
       (getConcentrationCeilingPercent(candidate.assetType) / 100) * totalPortfolioValue;
-    const sizeDollars = Math.min(remainingCash, ceilingValue);
+    const room = ceilingValue - candidate.currentValue;
+    if (room <= 0) continue; // already at or over its own ceiling — no room to add
+
+    const sizeDollars = Math.min(remainingCash, room);
     const shares = Math.floor(sizeDollars / candidate.currentPrice);
     if (shares < 1) continue;
 

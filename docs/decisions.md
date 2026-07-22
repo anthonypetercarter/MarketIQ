@@ -548,6 +548,57 @@ shipped as the new hero of `/portfolio`, replacing Today's Playbook. New Positio
 exercised by its own verification script — removing it entirely is a real decision, not
 something to fold silently into a UI swap.
 
+**Addendum — "New Positions" becomes "Today's Actions": INCREASE, REDUCE, and EXIT get
+real sizing for the first time**
+
+Living with the shipped feature surfaced a real, meaningful gap the founder caught
+directly: the Council could issue `INCREASE`, `REDUCE`, or `EXIT` on an existing holding,
+but none of them ever produced a real trade — only brand-new `BUY` verdicts got actual
+share counts. Worse, `computeReduceToConcentrationCeiling` and `computeExitSizing` had
+already been built as real, tested pure functions in the original Portfolio Review pass
+above — they were simply never wired into the live generation script. The gap wasn't a
+missing function; it was a missing connection.
+
+**Decision:** rename "New Positions" to "Today's Actions" and make it a genuinely unified
+list of every real, sized move — not just brand-new buys. `sizeNewPositionBuys` was
+generalized into `sizeApprovedBuys`, which now handles both a brand-new position
+(`currentValue: 0`) and an increase to an existing one (`currentValue`: the position's
+real current market value) through the identical shared-cash-pool mechanism — they're the
+same real operation (spend cash to build a position up toward its ceiling), differing only
+in starting point. `computeReduceToConcentrationCeiling` and `computeExitSizing` are now
+actually called in the generation script, keyed off the real holding by ticker.
+
+**A real, explicit priority choice, not an accident of array order:** when an `INCREASE`
+and a brand-new `BUY` compete for the same limited Excess Cash, `INCREASE` candidates are
+processed first — reinforcing an already-vetted, real position ahead of opening a new one.
+Reasonable as a default; easy to revisit if it produces the wrong call once lived with
+further.
+
+**One honest limitation, surfaced rather than papered over:** `computeReduceToConcentrationCeiling`
+only produces a real trim when a position is genuinely over its own concentration ceiling.
+If the Council ever issues a qualitative `REDUCE` for a different reason — the thesis
+softened, not a concentration breach — there is currently no mechanical way to size _how
+much_ to trim. Rather than fabricate a number, the UI states this plainly: "the Council
+recommended reducing this position, but it isn't currently over its concentration
+ceiling — there's no mechanical trim to compute for a qualitative reason like this yet."
+Same discipline as the existing "approved but no room to size" case for new buys — an
+honest gap stated in the product, not a guessed answer.
+
+A position can now legitimately appear in both `existingHoldings` (the full reviewed
+record with its evidence — every position gets this) and `todaysActions` (the real trade,
+when one exists) — intentional, not duplication: Existing Holdings is complete supporting
+detail, Today's Actions is the lead, conclusion-first summary of what actually changed.
+
+**Verified:** synthetic tests confirming `INCREASE` sizing correctly uses real remaining
+room (ceiling minus current value, not the full ceiling), a mixed `INCREASE`+`BUY` batch
+correctly sharing one cash pool with `INCREASE` claiming priority, a position already at
+its ceiling correctly producing zero room to increase, and both `REDUCE` cases — the real
+trim when genuinely over-ceiling, and the honest `null` when not — behaving exactly as
+designed. A full component render covering all six real action-type combinations (Increase
+with a sized trade, new Buy with a sized trade, Buy approved-but-unsized, Reduce with a
+real trim, Reduce with the new honest fallback, and Exit) confirmed every case displays
+correctly, including a position correctly appearing in both sections at once.
+
 ---
 
 ## 8. Dashboard retired — its two unique sections relocated, not deleted
