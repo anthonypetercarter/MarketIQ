@@ -177,6 +177,7 @@ async function main() {
       verdict: "INCREASE",
       evidence: v.evidence,
       side: "BUY",
+      priceAtVerdict: v.priceAtVerdict,
       trade: buyTradeByTicker.get(v.ticker) ?? null,
     });
   }
@@ -188,6 +189,7 @@ async function main() {
       verdict: "BUY",
       evidence: v.evidence,
       side: "BUY",
+      priceAtVerdict: v.currentPrice,
       trade: buyTradeByTicker.get(v.ticker) ?? null,
     });
   }
@@ -209,6 +211,7 @@ async function main() {
       verdict: "REDUCE",
       evidence: v.evidence,
       side: "SELL",
+      priceAtVerdict: v.priceAtVerdict,
       trade,
     });
   }
@@ -223,6 +226,7 @@ async function main() {
       verdict: "EXIT",
       evidence: v.evidence,
       side: "SELL",
+      priceAtVerdict: v.priceAtVerdict,
       trade,
     });
   }

@@ -25,6 +25,8 @@ export interface TodaysActionBuySide {
   verdict: "BUY" | "INCREASE";
   evidence: string[];
   side: "BUY";
+  /** The real price at the moment this verdict was issued, independent of whether a trade could be sized. */
+  priceAtVerdict: number;
   /** Null when the Council approved the move but there wasn't enough Excess Cash/room left to size it that day. */
   trade: BuyTrade | null;
 }
@@ -35,6 +37,8 @@ export interface TodaysActionSellSide {
   verdict: "REDUCE" | "EXIT";
   evidence: string[];
   side: "SELL";
+  /** The real price at the moment this verdict was issued. */
+  priceAtVerdict: number;
   /**
    * Null when the Council issued a qualitative REDUCE that isn't backed by
    * a concentration-ceiling breach — the deterministic sizing layer only

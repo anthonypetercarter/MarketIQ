@@ -25,6 +25,8 @@ export interface HoldingVerdictResult {
   evidence: string[];
   /** False when this verdict was degraded to a safe default because the raw output failed validation. */
   validated: boolean;
+  /** The real price at the moment this verdict was issued — needed to evaluate whether it turned out well, once enough time has passed. */
+  priceAtVerdict: number;
 }
 
 /** A validated BUY verdict on a candidate not currently held — carries what deterministic sizing needs. */
@@ -62,7 +64,12 @@ function isValidVerdict(value: unknown): value is Verdict {
   return typeof value === "string" && (VALID_VERDICTS as readonly string[]).includes(value);
 }
 
-function safeHold(ticker: string, companyName: string, reason: string): HoldingVerdictResult {
+function safeHold(
+  ticker: string,
+  companyName: string,
+  reason: string,
+  priceAtVerdict: number,
+): HoldingVerdictResult {
   return {
     ticker,
     companyName,
@@ -71,6 +78,7 @@ function safeHold(ticker: string, companyName: string, reason: string): HoldingV
       `Unable to generate a validated verdict today (${reason}) — held as a safe default.`,
     ],
     validated: false,
+    priceAtVerdict,
   };
 }
 
@@ -208,14 +216,24 @@ export function validatePortfolioReview(
 
     if (!raw) {
       warnings.push(`No verdict returned for ${holding.ticker} — defaulted to HOLD.`);
-      return safeHold(holding.ticker, holding.companyName, "no verdict returned");
+      return safeHold(
+        holding.ticker,
+        holding.companyName,
+        "no verdict returned",
+        holding.currentPrice,
+      );
     }
 
     if (!isValidVerdict(raw.verdict)) {
       warnings.push(
         `Invalid verdict value for ${holding.ticker}: ${JSON.stringify(raw.verdict)} — defaulted to HOLD.`,
       );
-      return safeHold(holding.ticker, holding.companyName, "invalid verdict value");
+      return safeHold(
+        holding.ticker,
+        holding.companyName,
+        "invalid verdict value",
+        holding.currentPrice,
+      );
     }
 
     const evidence = Array.isArray(raw.evidence)
@@ -226,7 +244,12 @@ export function validatePortfolioReview(
       warnings.push(
         `No usable evidence for ${holding.ticker} — defaulted to HOLD despite a stated verdict.`,
       );
-      return safeHold(holding.ticker, holding.companyName, "no evidence provided");
+      return safeHold(
+        holding.ticker,
+        holding.companyName,
+        "no evidence provided",
+        holding.currentPrice,
+      );
     }
 
     return {
@@ -235,6 +258,7 @@ export function validatePortfolioReview(
       verdict: raw.verdict,
       evidence,
       validated: true,
+      priceAtVerdict: holding.currentPrice,
     };
   });
 

@@ -298,6 +298,37 @@ sits. See `docs/decisions.md` #7 for the full history.
 deliberately left alone rather than deleted alongside its UI. Whether to remove it
 entirely is a real decision, not something to fold into a UI swap.
 
+## Track Record
+
+The outcome-measurement loop this project never had (`docs/decisions.md` #10). Every real
+Brief and Portfolio Review has been evidenced and disciplined, but nothing checked whether
+a past judgment actually turned out to be right — this closes that gap, deliberately
+scoped small as a first real building block, not a finished feature.
+
+**The honest constraint:** no historical price data exists before this feature shipped —
+`Company.currentPrice` gets overwritten on every refresh, so real evaluation only starts
+accumulating from today forward, not retroactively. Two real sources of signal make today
+useful anyway:
+
+- `Holding.costBasis` already captures the real price paid on every actual Buy/Increase —
+  real performance since purchase is computable today with zero new infrastructure.
+- `priceAtVerdict` — added to every verdict in `PortfolioReview.verdicts` this session
+  (no migration needed, same JSON-shape-can-evolve precedent as the rest of that column)
+  — captures the real price at the moment of judgment, accumulating going forward.
+
+`src/lib/council/trackRecord.ts`'s `computeVerdictOutcome` is deliberately simple and
+deterministic, not itself an AI judgment: `BUY`/`INCREASE` score `aligned` if the price
+genuinely rose since the verdict, `REDUCE`/`EXIT` score `aligned` if it genuinely fell
+(validating the trim or exit). `HOLD` is never scored `aligned`/`misaligned` by design —
+judging patience against price direction would silently punish the thing Hold is supposed
+to allow. A verdict younger than 7 real days is reported `too_early` rather than judged on
+noise; a move under 1% is treated as noise, not signal.
+
+Run `npm run council:track-record` to see both real signals — real holdings performance
+since purchase, and verdict-level evaluation once enough real reviews exist to check.
+Terminal-only for now, same discipline as every prior milestone: verify it's trustworthy
+before building any UI on top of it.
+
 ## Design Language
 
 Frozen after several rounds of founder review — see `src/app/globals.css` for tokens and

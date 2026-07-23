@@ -726,6 +726,79 @@ end-to-end against real Postgres data: a real fund company flowing correctly thr
 
 ---
 
+## 10. Track Record — the outcome-measurement loop this project never had
+
+**Status:** Accepted — implemented and verified. Deliberately scoped small: this is the
+first real building block, not a finished feature.
+
+**Context**
+
+Every real Brief and Portfolio Review this project has produced has been evidenced and
+disciplined, but nothing has ever checked whether a past judgment actually turned out to
+be right. The Chief Scientist's stated job since Sprint 1 has been exactly this — and
+until now, nothing computed it. Every other planned improvement (Research Assembly, model
+specialization, real fundamentals) is unverifiable without this loop existing first: there
+would be no way to know whether a change actually helped, or just sounded more
+sophisticated.
+
+**The real constraint that shapes the whole design**
+
+There is no historical price data before today. `Company.currentPrice` gets overwritten on
+every refresh; nothing has ever captured what a price was at the moment a verdict was
+issued. True evaluation of past verdicts can only start accumulating from today forward —
+not retroactively. Rather than pretend otherwise, this is stated as the honest starting
+point, with two real, distinct sources of signal used to make today still useful, not just
+a placeholder:
+
+1. **Already available, zero new infrastructure:** `Holding.costBasis` already captures
+   the real price paid whenever a Buy/Increase verdict was actually acted on. Every
+   currently-held position's real performance since purchase is computable today,
+   immediately, from data that already exists.
+2. **Newly captured, accumulating going forward:** `priceAtVerdict` — the real price at
+   the moment of judgment — added to every verdict in `PortfolioReview.verdicts`
+   (`HoldingVerdictResult` for existing holdings, both `TodaysAction` variants for new
+   positions and sell-side actions). No migration needed — the JSON column's shape simply
+   grew, same precedent as every other change to this column. Reviews generated before
+   this session won't have it; the evaluation script skips them honestly rather than
+   guessing.
+
+**The evaluation logic, and why HOLD is treated differently**
+
+`computeVerdictOutcome` (`src/lib/council/trackRecord.ts`) is deliberately simple and
+deterministic — not itself an AI judgment, but the measuring stick any future judgment
+about calibration would need. `BUY`/`INCREASE` are scored `aligned` if the price
+genuinely rose since the verdict; `REDUCE`/`EXIT` are scored `aligned` if the price
+genuinely fell (validating the trim or exit). `HOLD` is never scored `aligned` or
+`misaligned`, by design — judging a Hold against price direction would silently punish
+patience, which isn't what Hold claims to optimize for. Two more honesty checks: a verdict
+younger than 7 real days is reported `too_early` rather than judged on noise, and a price
+move smaller than 1% in either direction is treated as noise, not a real signal the market
+agreed or disagreed.
+
+**Verified:** all seven real behaviors confirmed with synthetic tests — a genuine BUY gain
+scored `aligned`, a genuine BUY loss scored `misaligned`, a verdict younger than the
+minimum window correctly gated to `too_early` regardless of how large the price move was,
+a `REDUCE` followed by a real decline scored `aligned` (the trim was validated), a
+`REDUCE` followed by a real rally scored `misaligned` (trimmed too early), `HOLD` confirmed
+to never score `aligned`/`misaligned` regardless of price direction, and a sub-1% move
+confirmed to register as noise rather than a false signal. Also verified end-to-end
+against real Postgres data via `scripts/evaluate-track-record.ts` (`npm run
+council:track-record`): real cost-basis-based performance computed correctly for real
+holdings, and a real, aged `PortfolioReview` record with a captured `priceAtVerdict`
+correctly evaluated for both a `BUY` and a `REDUCE` case, including the honest distinction
+between "performance since the position was actually opened" (cost basis) and
+"performance since this specific verdict was issued" (`priceAtVerdict`) — two genuinely
+different, both real, reference points.
+
+**What this deliberately doesn't do yet:** no UI — this is terminal-only for now, same
+discipline as every prior milestone (verify it's trustworthy before building on top of
+it). No confidence-calibration analysis yet (comparing stated confidence scores against
+real hit rates) — that needs real accumulated history this session couldn't manufacture.
+No retroactive backfill of pre-existing reviews — impossible honestly, since the price
+data was never captured, not something to approximate.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

@@ -21,6 +21,7 @@
     "data:sync-portfolio": "tsx scripts/sync-paper-portfolio.ts",
     "data:verify-fred": "tsx scripts/verify-fred.ts",
     "council:generate-review": "tsx scripts/generate-portfolio-review.ts",
+    "council:track-record": "tsx scripts/evaluate-track-record.ts",
     "council:sync-and-review": "npm run data:refresh-prices && npm run data:sync-portfolio && npm run council:generate-review"
   },
   "dependencies": {
