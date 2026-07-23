@@ -142,16 +142,32 @@ function mostRecentFact(concept: XbrlConcept | undefined): FactSummary | null {
   };
 }
 
-function findFirstAvailable(
+/**
+ * Real companies sometimes report a concept under more than one tag over
+ * their history — Apple's real filings, for example, used "Revenues"
+ * through 2018, then switched to
+ * "RevenueFromContractWithCustomerExcludingAssessedTax" after adopting
+ * ASC 606. Checking tags in order and stopping at the first one with ANY
+ * data would silently return a stale 2018 figure while a much more recent
+ * value sits under the newer tag. Instead, this checks the most recent
+ * value under EVERY known tag, then picks the single most recent one
+ * across all of them by real filed date.
+ */
+function mostRecentAcrossTags(
   facts: Record<string, XbrlConcept> | undefined,
   tags: string[],
 ): FactSummary | null {
   if (!facts) return null;
+
+  const candidates: FactSummary[] = [];
   for (const tag of tags) {
     const result = mostRecentFact(facts[tag]);
-    if (result) return result;
+    if (result) candidates.push(result);
   }
-  return null;
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => (a.filedDate < b.filedDate ? 1 : -1));
+  return candidates[0];
 }
 
 /**
@@ -164,8 +180,8 @@ export function extractKeyFundamentals(companyFacts: CompanyFactsResponse): KeyF
   const gaapFacts = companyFacts.facts["us-gaap"];
   return {
     entityName: companyFacts.entityName,
-    revenue: findFirstAvailable(gaapFacts, REVENUE_TAGS),
-    netIncome: findFirstAvailable(gaapFacts, NET_INCOME_TAGS),
-    totalAssets: findFirstAvailable(gaapFacts, TOTAL_ASSETS_TAGS),
+    revenue: mostRecentAcrossTags(gaapFacts, REVENUE_TAGS),
+    netIncome: mostRecentAcrossTags(gaapFacts, NET_INCOME_TAGS),
+    totalAssets: mostRecentAcrossTags(gaapFacts, TOTAL_ASSETS_TAGS),
   };
 }

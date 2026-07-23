@@ -801,11 +801,10 @@ data was never captured, not something to approximate.
 
 ## 11. SEC EDGAR — real, primary-source fundamentals, not just headlines
 
-**Status:** Accepted — implemented and verified against realistic synthetic data matching
-SEC's real, documented API shape. The live fetch itself is unverified in this sandbox
-(`data.sec.gov` isn't reachable here — same category of limitation as Alpaca, FRED, and
-Anthropic before it) and needs confirmation via `npm run data:verify-edgar` in a real
-environment.
+**Status:** Accepted — implemented and verified against both realistic synthetic data
+and, since revised below, a real live call against `data.sec.gov` with real AAPL data.
+The first live run surfaced a real bug synthetic tests hadn't caught (see the addendum) —
+fixed and re-verified.
 
 **Context**
 
@@ -849,6 +848,35 @@ ready for a real, live end-to-end confirmation once run in an environment that c
 **What this doesn't do yet:** nothing wired into Brief drafting or Research Assembly —
 this is the data-access layer only, the same staged approach as Alpaca and FRED before it
 (Milestone 1 fetches real data; using it inside real research is a distinct next step).
+
+**Addendum — the live test caught a real bug the synthetic tests hadn't anticipated**
+
+The first real run against `data.sec.gov` (`npm run data:verify-edgar`, real AAPL data)
+returned a genuinely stale 2018 revenue figure while `netIncome` and `totalAssets` both
+correctly returned current 2026 data — worth being honest that the script's own success
+message ("confirmed working end to end") was premature; it checked that data came back at
+all, not that the values were sane. The founder caught the discrepancy by actually reading
+the output, not by the tooling flagging it.
+
+**Real cause:** Apple genuinely stopped filing under the `Revenues` XBRL tag around 2018,
+after adopting ASC 606, and switched to `RevenueFromContractWithCustomerExcludingAssessedTax`
+— a real, industry-wide tag transition, not a data error. The original extraction logic
+checked tags in order and stopped at the first one with _any_ data, so it silently
+returned the stale 2018 figure without ever checking whether a newer tag had more recent
+data.
+
+**Fix:** `mostRecentAcrossTags` replaces the original tag-order logic — it checks the most
+recent value under _every_ known tag, then picks the single most recent one across all of
+them by real filed date, order-independent. Verified with a new synthetic test replicating
+the exact real scenario (an old tag with stale data, a new tag with current data,
+confirmed to pick the current one) plus a companion test confirming this is independent
+of which tag happens to appear first in the object.
+
+This is exactly why the project's discipline has been to run real data through real code
+before trusting it, rather than stopping at passing synthetic tests — the synthetic tests
+were correct for what they checked; they simply hadn't anticipated that a real company
+could report the same concept under two different tags with very different recency. Real
+data found the gap synthetic data couldn't.
 
 ---
 
