@@ -151,6 +151,11 @@ model Company {
   /// concentration ceiling applied and the evidence standard the Council
   /// holds a candidate to. Defaults to EQUITY for every pre-existing row.
   assetType          AssetType     @default(EQUITY)
+  /// SEC's real Central Index Key, cached once looked up (decision #11) —
+  /// a CIK never changes, so caching avoids re-fetching SEC's large,
+  /// shared ticker-mapping file on every Portfolio Review. Null for a
+  /// fund or any company EDGAR has never successfully resolved.
+  cik                String?
 
   holdings           Holding[]
   opportunities      Opportunity[]

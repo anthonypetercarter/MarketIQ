@@ -108,6 +108,12 @@ function buildSystemPrompt(): string {
       "materially higher concentration ceiling than an EQUITY, reflecting that a diversified basket " +
       "doesn't carry one company's idiosyncratic risk — this is already reflected in the sizing math " +
       "downstream, not something you need to account for yourself.",
+    "- Some holdings and candidates carry a `fundamentals` field — real, primary-source financial data " +
+      "from that company's actual SEC filings (real revenue, net income, total assets, with the real " +
+      "fiscal period and filing date it came from), not a news summary of it. When present, this is " +
+      "real, citable evidence — use it, and cite the real figures and real filing date, not just that " +
+      '"fundamentals look strong." When `fundamentals` is null — a fund, or a company EDGAR couldn\'t ' +
+      "resolve — say so honestly if it's relevant, never invent a number to fill the gap.",
   ].join("\n");
 }
 

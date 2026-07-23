@@ -194,15 +194,21 @@ SEC's own developer docs. The one real requirement is a genuine, identifying
 `EDGAR_USER_AGENT` in `.env` per SEC's fair-access policy — a courtesy, not credentials.
 
 Handles two real, documented XBRL quirks rather than naively assuming clean data:
-different companies report the same concept (e.g. revenue) under different real tag
-names (`extractKeyFundamentals` tries each known one in order), and SEC's own API doesn't
-guarantee filings arrive in chronological order (sorted by real filing date before
-picking the most recent). Never fabricates a figure — genuinely missing data returns
-`null`.
+different companies — and the same company over time — report the same real concept
+(e.g. revenue) under different tags (a real, live bug: Apple's real filings switched from
+`Revenues` to `RevenueFromContractWithCustomerExcludingAssessedTax` around 2018 after
+adopting ASC 606; the first version of this code silently returned a stale 2018 figure by
+stopping at the first tag with any data — `mostRecentAcrossTags` now checks every known
+tag and picks whichever is genuinely most recent by real filing date). SEC's own API also
+doesn't guarantee filings arrive in chronological order within a tag, handled the same
+way. Never fabricates a figure — genuinely missing data returns `null`.
 
-Run `npm run data:verify-edgar` to confirm the real, live connection end to end. Nothing
-wired into Brief drafting yet — this is the data-access layer only, same staged approach
-Alpaca and FRED followed before it.
+Run `npm run data:verify-edgar` to confirm the real, live connection end to end. Wired
+into the actual research packet, not just Brief prose — every held and candidate
+company's real fundamentals flow into `assembleResearchPacket` on every real Portfolio
+Review, with `Company.cik` caching SEC's real Central Index Key (never changes, avoids
+re-fetching the shared ticker-mapping file) and graceful, per-company degradation to
+`null` on any real failure rather than blocking the whole review.
 
 ### Paper Portfolio Sync
 

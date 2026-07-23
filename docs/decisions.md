@@ -878,6 +878,40 @@ were correct for what they checked; they simply hadn't anticipated that a real c
 could report the same concept under two different tags with very different recency. Real
 data found the gap synthetic data couldn't.
 
+**Addendum — wired into the Council's actual research packet, not just Brief prose**
+
+The smaller version of this would have been "use EDGAR data when I happen to draft a new
+Opportunity." Built the larger, more valuable version instead: real fundamentals now flow
+into `assembleResearchPacket` for **every** holding and candidate, every real morning —
+not just for a company I happen to write about, but for every position the Council reviews
+daily.
+
+`Company.cik` (nullable) caches SEC's real Central Index Key once resolved — a CIK never
+changes, so this avoids re-fetching SEC's large, shared ticker-mapping file on every
+Portfolio Review. `fetchFundamentalsResilient` wraps the real lookup-then-fetch-then-
+extract chain in a single call that degrades to `null` on any real failure — a fund (which
+doesn't file its own 10-K), a company EDGAR can't resolve, a real network hiccup — never
+throwing and blocking the whole review over one company's data. Real, deliberate pacing
+(150ms between requests) respects SEC's fair-access policy rather than treating a
+government system like a commercial API built for rapid automated traffic.
+
+`assembleResearchPacket` stays pure — it never fetches anything itself. The orchestrating
+script (`generate-portfolio-review.ts`) does the real fetching first, then passes an
+optional `fundamentalsByTicker` map in; the packet-assembly function only ever consumes
+what it's given, same discipline as everywhere else in this codebase. The Council's system
+prompt was extended with one new hard rule: when real fundamentals are present, cite the
+real figures and real filing date, not a vague "fundamentals look strong"; when the field
+is `null`, say so honestly rather than inventing a number.
+
+**Verified:** three synthetic tests confirming a holding with real fundamentals correctly
+carries them into the packet, a fund correctly shows `null` (not an error), the
+`fundamentalsByTicker` parameter being omitted entirely degrades gracefully to `null` for
+every holding rather than crashing, and a candidate Opportunity (not just an existing
+holding) also correctly carries real fundamentals through. The live fetch itself — the CIK
+caching, the real EDGAR calls, the whole orchestration — is unverified in this sandbox for
+the same reason as the base integration; needs confirmation via a real
+`council:sync-and-review` run.
+
 ---
 
 # North Star Vision

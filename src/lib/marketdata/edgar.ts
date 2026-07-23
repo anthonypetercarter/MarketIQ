@@ -185,3 +185,30 @@ export function extractKeyFundamentals(companyFacts: CompanyFactsResponse): KeyF
     totalAssets: mostRecentAcrossTags(gaapFacts, TOTAL_ASSETS_TAGS),
   };
 }
+
+/**
+ * Real, resilient orchestration for callers that just want "fundamentals
+ * for this ticker, or null" without handling every possible real failure
+ * themselves — a company with no CIK, a thin filing history, or a real
+ * network hiccup should degrade that one company to null, never throw and
+ * block an entire Portfolio Review over one bad lookup. Accepts an
+ * optional pre-cached CIK (see Company.cik) to skip the ticker-mapping
+ * fetch entirely when the caller already knows it.
+ */
+export async function fetchFundamentalsResilient(
+  ticker: string,
+  cachedCik?: string | null,
+): Promise<{ cik: string; fundamentals: KeyFundamentals } | null> {
+  try {
+    const cik = cachedCik ?? (await lookupCik(ticker));
+    if (!cik) return null;
+
+    const companyFacts = await fetchCompanyFacts(cik);
+    const fundamentals = extractKeyFundamentals(companyFacts);
+    return { cik, fundamentals };
+  } catch {
+    // Deliberately swallowed — a real, honest "we don't have this today"
+    // is preferable to crashing the whole review over one company's data.
+    return null;
+  }
+}

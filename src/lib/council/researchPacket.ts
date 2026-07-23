@@ -11,6 +11,7 @@
 
 import type { HoldingWithCompany, AllocationGap } from "@/lib/portfolio/allocation";
 import { marketValue, computeTotalPortfolioValue } from "@/lib/portfolio/allocation";
+import type { KeyFundamentals } from "@/lib/marketdata/edgar";
 
 export interface ResearchPacketHolding {
   ticker: string;
@@ -25,6 +26,8 @@ export interface ResearchPacketHolding {
   marketValue: number;
   percentOfPortfolio: number;
   unrealizedGainPercent: number;
+  /** Real, primary-source fundamentals from SEC EDGAR (decision #11) — null when unavailable (a fund, or a company EDGAR couldn't resolve), never fabricated. */
+  fundamentals: KeyFundamentals | null;
 }
 
 export interface ResearchPacketRisk {
@@ -52,6 +55,8 @@ export interface ResearchPacketCandidate {
   currentPrice: number;
   thesis: string;
   conviction: number;
+  /** Real, primary-source fundamentals from SEC EDGAR (decision #11) — null when unavailable, never fabricated. */
+  fundamentals: KeyFundamentals | null;
 }
 
 export interface ResearchPacketAllocationGap {
@@ -105,8 +110,10 @@ export function assembleResearchPacket(input: {
   cashBalance: number;
   brief: BriefForPacket;
   allocationGaps: AllocationGap[];
+  /** Pre-fetched, keyed by ticker — this function stays pure and never fetches EDGAR data itself. Missing entries treated as null (unavailable). */
+  fundamentalsByTicker?: Map<string, KeyFundamentals | null>;
 }): ResearchPacket {
-  const { holdings, cashBalance, brief, allocationGaps } = input;
+  const { holdings, cashBalance, brief, allocationGaps, fundamentalsByTicker } = input;
   const totalPortfolioValue = computeTotalPortfolioValue(holdings, cashBalance);
 
   const packetHoldings: ResearchPacketHolding[] = holdings.map((h) => {
@@ -124,6 +131,7 @@ export function assembleResearchPacket(input: {
       percentOfPortfolio: totalPortfolioValue > 0 ? (value / totalPortfolioValue) * 100 : 0,
       unrealizedGainPercent:
         h.costBasis > 0 ? ((h.company.currentPrice - h.costBasis) / h.costBasis) * 100 : 0,
+      fundamentals: fundamentalsByTicker?.get(h.company.ticker) ?? null,
     };
   });
 
@@ -138,6 +146,7 @@ export function assembleResearchPacket(input: {
       currentPrice: o.company!.currentPrice,
       thesis: o.thesis,
       conviction: o.conviction,
+      fundamentals: fundamentalsByTicker?.get(o.company!.ticker) ?? null,
     }));
 
   return {

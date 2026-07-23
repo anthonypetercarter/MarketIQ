@@ -31,6 +31,7 @@ import {
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
 import { callCouncilForPortfolioReview } from "../src/lib/council/generatePortfolioReview";
 import { validatePortfolioReview } from "../src/lib/council/validatePortfolioReview";
+import { fetchFundamentalsResilient, type KeyFundamentals } from "../src/lib/marketdata/edgar";
 import type {
   StoredPortfolioReviewVerdicts,
   TodaysAction,
@@ -89,9 +90,50 @@ async function main() {
   }));
   const gaps = computeAllocationGaps(currentAllocation, allocationTargets);
 
+  // Real, primary-source fundamentals from SEC EDGAR (decision #11) — best
+  // effort. A company EDGAR can't resolve (a fund, a real network issue)
+  // degrades to null for that one company; it never blocks the review.
+  const companiesToFetch = [
+    ...portfolio.holdings.map((h) => h.company),
+    ...brief.opportunities.map((o) => o.company).filter((c) => c !== null),
+  ];
+  const uniqueCompaniesByTicker = new Map(companiesToFetch.map((c) => [c.ticker, c]));
+
+  console.log(
+    `Fetching real EDGAR fundamentals for ${uniqueCompaniesByTicker.size} compan${uniqueCompaniesByTicker.size === 1 ? "y" : "ies"}...`,
+  );
+  const fundamentalsByTicker = new Map<string, KeyFundamentals | null>();
+  for (const company of uniqueCompaniesByTicker.values()) {
+    if (company.assetType === "FUND") {
+      // A fund doesn't file its own 10-K/10-Q the way a single company
+      // does — not a failure, just genuinely not applicable.
+      fundamentalsByTicker.set(company.ticker, null);
+      continue;
+    }
+
+    const result = await fetchFundamentalsResilient(company.ticker, company.cik);
+    fundamentalsByTicker.set(company.ticker, result?.fundamentals ?? null);
+
+    // Cache a newly-discovered CIK so the next run skips the ticker-mapping
+    // lookup entirely for this company — a real CIK never changes.
+    if (result && company.cik !== result.cik) {
+      await prisma.company.update({ where: { id: company.id }, data: { cik: result.cik } });
+    }
+
+    // Real, polite pacing between SEC requests per their fair-access policy
+    // — this is a real government system, not a commercial API meant for
+    // rapid-fire automated traffic.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  const foundCount = [...fundamentalsByTicker.values()].filter((f) => f !== null).length;
+  console.log(
+    `Real fundamentals found for ${foundCount}/${uniqueCompaniesByTicker.size} compan${uniqueCompaniesByTicker.size === 1 ? "y" : "ies"}.`,
+  );
+
   const packet = assembleResearchPacket({
     holdings: holdingsForCalc,
     cashBalance,
+    fundamentalsByTicker,
     brief: {
       date: brief.date,
       councilRecommendation: brief.councilRecommendation,
