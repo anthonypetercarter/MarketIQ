@@ -799,6 +799,59 @@ data was never captured, not something to approximate.
 
 ---
 
+## 11. SEC EDGAR — real, primary-source fundamentals, not just headlines
+
+**Status:** Accepted — implemented and verified against realistic synthetic data matching
+SEC's real, documented API shape. The live fetch itself is unverified in this sandbox
+(`data.sec.gov` isn't reachable here — same category of limitation as Alpaca, FRED, and
+Anthropic before it) and needs confirmation via `npm run data:verify-edgar` in a real
+environment.
+
+**Context**
+
+Every real Opportunity in every real Brief so far — ASML, UNH, JNJ, Morgan Stanley, VBR —
+has come from general web search over news headlines. Real, but narrow: a headline reports
+that a company beat earnings; it doesn't carry the primary-source financial detail (real
+margin trends, real debt levels, real balance sheet health) that Research Assembly was
+always meant to eventually provide. This closes that specific gap first, since it's the
+cheapest real upgrade available — genuinely free, zero account, zero API key.
+
+**Genuinely the simplest external integration in this project.** `data.sec.gov` requires
+no authentication of any kind, confirmed directly from SEC's own developer documentation —
+not a limited free tier, the same production API that Bloomberg and FactSet source their
+own EDGAR data from. The one real requirement, per SEC's fair-access policy, is a real,
+identifying `User-Agent` header (`EDGAR_USER_AGENT` in `.env`) — a courtesy so SEC can
+reach a real person if automated access ever misbehaves, not credentials.
+
+**Two real, documented API quirks this integration handles correctly, not naively:**
+
+- **XBRL tag inconsistency.** Different real companies report the same real concept
+  (revenue) under different tags — `Revenues` for some,
+  `RevenueFromContractWithCustomerExcludingAssessedTax` for others.
+  `extractKeyFundamentals` tries each known real tag in order rather than assuming one
+  canonical name exists.
+- **Out-of-order filing data.** SEC's real API doesn't guarantee filings arrive
+  chronologically in the response array. The extraction logic sorts by real filing date to
+  find what's genuinely most recent, rather than trusting array order.
+
+Extraction never fabricates a figure — a company that genuinely doesn't report a given
+fact under any known tag returns `null`, not a guess.
+
+**Verified:** four synthetic tests against data shaped exactly like SEC's real, documented
+response structure — the standard case (correctly picks the most recently _filed_ value,
+not just the first array entry), the alternate-tag case (correctly finds revenue when the
+primary tag is absent), the genuinely-missing-data case (correctly returns `null`, not
+fabricated), and the out-of-order-filings case (correctly identifies the real most recent
+filing despite array order). `scripts/verify-edgar.ts` (`npm run data:verify-edgar`) is
+ready for a real, live end-to-end confirmation once run in an environment that can reach
+`data.sec.gov`.
+
+**What this doesn't do yet:** nothing wired into Brief drafting or Research Assembly —
+this is the data-access layer only, the same staged approach as Alpaca and FRED before it
+(Milestone 1 fetches real data; using it inside real research is a distinct next step).
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

@@ -184,6 +184,26 @@ update the database — requires `ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY`, a
 Deliberately a manual script for now, not a scheduled job — see decision #5's staging
 discipline.
 
+### SEC EDGAR — Real Fundamentals
+
+`edgar.ts` (`docs/decisions.md` #11). Real, primary-source financial data — actual filed
+10-Ks and 10-Qs — closing the gap every prior real Opportunity has had: sourced from web
+search headlines, never a company's own filings. Genuinely the simplest integration
+here — `data.sec.gov` requires no account and no API key at all, confirmed directly from
+SEC's own developer docs. The one real requirement is a genuine, identifying
+`EDGAR_USER_AGENT` in `.env` per SEC's fair-access policy — a courtesy, not credentials.
+
+Handles two real, documented XBRL quirks rather than naively assuming clean data:
+different companies report the same concept (e.g. revenue) under different real tag
+names (`extractKeyFundamentals` tries each known one in order), and SEC's own API doesn't
+guarantee filings arrive in chronological order (sorted by real filing date before
+picking the most recent). Never fabricates a figure — genuinely missing data returns
+`null`.
+
+Run `npm run data:verify-edgar` to confirm the real, live connection end to end. Nothing
+wired into Brief drafting yet — this is the data-access layer only, same staged approach
+Alpaca and FRED followed before it.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —
