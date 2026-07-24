@@ -91,6 +91,29 @@ async function main() {
     },
   });
 
+  // Added after the fact, same as CVS/FSLR: the first real bond-ETF
+  // candidate, per decision #12. The real, current environment argues
+  // against the obvious high-yield/long-duration pick — market pricing
+  // has shifted toward real odds of a Fed rate hike, not a cut, and TLT
+  // (long Treasuries) has already fallen on the real, recent long-end
+  // backup. BND is the more defensible real choice: broad, diversified,
+  // moderate blended duration, real low cost — the same "start with the
+  // diversified core" logic that made VBR the right first equity fund.
+  const bnd = await prisma.company.upsert({
+    where: { ticker: "BND" },
+    update: {},
+    create: {
+      ticker: "BND",
+      name: "Vanguard Total Bond Market ETF",
+      sector: "Fixed Income",
+      currentPrice: 72.15,
+      previousClosePrice: 72.05,
+      region: "DOMESTIC",
+      assetType: "FUND",
+      assetClass: "BOND",
+    },
+  });
+
   const decisionRationale =
     "A real, partial relief day, not a full reversal: Intel broke the AI-capex-selloff " +
     "pattern positively with a genuine strong guidance beat, and oil retreated back below " +
@@ -131,10 +154,13 @@ async function main() {
     "week) and First Solar (a real Q1 beat with reaffirmed guidance, tied to the same " +
     "AI/data-center demand theme already prominent this week). Industrials and financials " +
     "were checked with the same rigor and came up empty for a fresh, individually strong " +
-    "candidate today. On balance: real, partial improvement, still held to Maintain Current " +
-    "Allocation rather than fully reversing yesterday's caution, with Apple reporting " +
-    "specifically on Thursday, July 30 as the next real test directly relevant to a position " +
-    "actually held.";
+    "candidate today. This Brief also names the first real bond-fund candidate now that " +
+    "Bonds is a genuinely actionable category: BND, a broad, diversified core holding " +
+    "chosen deliberately over a higher-yielding, longer-duration alternative given real, " +
+    "current rate-hike risk on the long end of the curve. On balance: real, partial " +
+    "improvement, still held to Maintain Current Allocation rather than fully reversing " +
+    "yesterday's caution, with Apple reporting specifically on Thursday, July 30 as the " +
+    "next real test directly relevant to a position actually held.";
 
   const historicalSimilarityNarrative =
     "A genuinely mixed day, worth resisting the urge to force into a clean 'good' or 'bad' " +
@@ -414,6 +440,29 @@ async function main() {
         "solar capacity specifically.",
       conviction: 55,
       companyId: fslr.id,
+    },
+  });
+
+  await prisma.opportunity.create({
+    data: {
+      briefId: brief.id,
+      thesis:
+        "The first real fund-level bond candidate — a genuinely different kind of thesis " +
+        "from every equity opportunity above, and worth being honest about a real, current " +
+        "complication rather than a simple 'buy bonds for yield' pitch. Market pricing has " +
+        "shifted toward real odds of a Fed rate hike before year-end, not a cut, with the " +
+        "10-year yield rising and the 30-year at 5.10%; long-duration Treasuries (TLT) have " +
+        "already fallen roughly 1.73% over the past month on the real, current long-end " +
+        "backup. Reaching for the highest-yielding, longest-duration bond fund right now " +
+        "would mean picking the one part of the bond market with the most real, immediate " +
+        "rate risk. BND is the more defensible starting choice instead: broad, diversified " +
+        "exposure across the full US bond market (Treasuries, corporates, mortgage-backed), " +
+        "a moderate blended duration rather than a long-duration bet, and a real, low 0.04% " +
+        "expense ratio per its own June 2026 fact sheet. The portfolio's Bonds allocation " +
+        "has been a real, unaddressed gap since the very first Brief — this is a genuine " +
+        "starting position, not a tactical rate call.",
+      conviction: 52,
+      companyId: bnd.id,
     },
   });
 
