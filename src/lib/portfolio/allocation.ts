@@ -13,6 +13,8 @@ export interface HoldingWithCompany {
     previousClosePrice: number;
     region: "DOMESTIC" | "INTERNATIONAL";
     assetType: "EQUITY" | "FUND";
+    /** Orthogonal to assetType — routes a holding into the Bonds allocation category regardless of region. Defaults to EQUITY. See decision #12. */
+    assetClass: "EQUITY" | "BOND";
   };
 }
 
@@ -22,7 +24,7 @@ export interface AllocationTargetLike {
 }
 
 export interface CurrentAllocationEntry {
-  category: "US Equities" | "International Equities" | "Cash";
+  category: "US Equities" | "International Equities" | "Bonds" | "Cash";
   actualValue: number;
   actualPercent: number;
 }
@@ -32,7 +34,7 @@ export type AllocationStatus = "ALIGNED" | "OVERWEIGHT" | "UNDERWEIGHT" | "NOT_T
 export interface AllocationGap {
   category: string;
   targetPercent: number;
-  /** null for categories Sprint 2 doesn't model as real holdings (Bonds, Alternatives) — see docs/decisions.md. */
+  /** null for categories not modeled as real holdings — only Alternatives now, since decision #12 added real Bonds tracking. See docs/decisions.md. */
   actualPercent: number | null;
   gapPoints: number | null;
   status: AllocationStatus;
@@ -49,17 +51,25 @@ export function computeTotalPortfolioValue(
   return holdings.reduce((sum, h) => sum + marketValue(h), 0) + cashBalance;
 }
 
-/** Actual allocation across the three categories Sprint 2 models with real holdings. */
+/** Actual allocation across the four categories now modeled with real holdings — see decision #12 for Bonds. */
 export function computeCurrentAllocation(
   holdings: HoldingWithCompany[],
   cashBalance: number,
 ): CurrentAllocationEntry[] {
   const total = computeTotalPortfolioValue(holdings, cashBalance);
+
+  // Bonds are routed by assetClass first, independent of region — a bond
+  // ETF is a real, domestic-listed ticker, but must never be silently
+  // counted as a US Equity. Everything else falls through to the
+  // existing region-based equity routing, unchanged.
+  const bondValue = holdings
+    .filter((h) => h.company.assetClass === "BOND")
+    .reduce((sum, h) => sum + marketValue(h), 0);
   const domesticValue = holdings
-    .filter((h) => h.company.region === "DOMESTIC")
+    .filter((h) => h.company.assetClass !== "BOND" && h.company.region === "DOMESTIC")
     .reduce((sum, h) => sum + marketValue(h), 0);
   const internationalValue = holdings
-    .filter((h) => h.company.region === "INTERNATIONAL")
+    .filter((h) => h.company.assetClass !== "BOND" && h.company.region === "INTERNATIONAL")
     .reduce((sum, h) => sum + marketValue(h), 0);
 
   const pct = (value: number) => (total > 0 ? (value / total) * 100 : 0);
@@ -71,6 +81,7 @@ export function computeCurrentAllocation(
       actualValue: internationalValue,
       actualPercent: pct(internationalValue),
     },
+    { category: "Bonds", actualValue: bondValue, actualPercent: pct(bondValue) },
     { category: "Cash", actualValue: cashBalance, actualPercent: pct(cashBalance) },
   ];
 }

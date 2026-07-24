@@ -210,6 +210,37 @@ Review, with `Company.cik` caching SEC's real Central Index Key (never changes, 
 re-fetching the shared ticker-mapping file) and graceful, per-company degradation to
 `null` on any real failure rather than blocking the whole review.
 
+### Bonds — a Real, Actionable Allocation Category
+
+`docs/decisions.md` #12. Every real Brief has always shown a Bonds target with a real gap
+against it — nothing could ever be bought to close that gap until this. Real, liquid bond
+ETFs (`AGG`, `BND`, `TLT`, `SHY`, `LQD`, `HYG`, `TIP`, etc.) trade exactly like `AAPL` or
+`VBR`, so the entire existing Alpaca pricing and paper-sync pipeline works completely
+unchanged for them — no new trading integration needed.
+
+`Company.assetClass` (`EQUITY` | `BOND`) is deliberately **orthogonal** to `assetType`
+(`EQUITY` | `FUND`), not folded into it — they answer genuinely different questions.
+`assetType` drives the concentration ceiling (one company's idiosyncratic risk vs. a
+diversified basket); `assetClass` drives which allocation category a holding routes into.
+A bond ETF is both `FUND` (still gets the 40% ceiling) and `BOND` (routes to the real
+Bonds category) at once. `computeCurrentAllocation` checks `assetClass` first — a bond
+ETF is a real, domestic-listed ticker, and without this check would have been silently
+miscounted as a US Equity. `computeAllocationGaps` needed zero changes — Bonds simply
+stopped being `NOT_TRACKED` once real values started flowing in. Alternatives remains
+exactly as untracked as before; this was deliberately scoped to Bonds only.
+
+The Council's evidence standard for a bond is genuinely different, not just less
+complete — real yield, duration, and credit-quality reasoning, not earnings, which don't
+exist for a bond. `fundamentals` is correctly always `null` for a bond (no 10-Q to file),
+named as expected behavior in the system prompt, not a gap.
+
+Individual bonds and T-bills are real and tradeable through Alpaca's actual Fixed Income
+API, but that's documented under Alpaca's Broker API tier — a different product surface
+than the standard account this project's paper trading already uses — and remains a real,
+separate possibility, not pursued here. No structured bond-specific data source exists yet
+either (no EDGAR-equivalent for yield/duration) — real bond Opportunities are sourced the
+same way every equity Opportunity was before EDGAR and Track Record existed.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

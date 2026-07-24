@@ -20,6 +20,8 @@ export interface ResearchPacketHolding {
   region: "DOMESTIC" | "INTERNATIONAL";
   /** EQUITY vs. FUND — changes both the concentration ceiling applied and the evidence standard the Council holds this position to. */
   assetType: "EQUITY" | "FUND";
+  /** Orthogonal to assetType — EQUITY vs. BOND. A bond's real evidence shape is yield/duration/credit-quality, not earnings — see decision #12. */
+  assetClass: "EQUITY" | "BOND";
   quantity: number;
   costBasis: number;
   currentPrice: number;
@@ -52,6 +54,7 @@ export interface ResearchPacketCandidate {
   companyName: string;
   region: "DOMESTIC" | "INTERNATIONAL";
   assetType: "EQUITY" | "FUND";
+  assetClass: "EQUITY" | "BOND";
   currentPrice: number;
   thesis: string;
   conviction: number;
@@ -98,6 +101,7 @@ interface BriefForPacket {
       currentPrice: number;
       region: "DOMESTIC" | "INTERNATIONAL";
       assetType: "EQUITY" | "FUND";
+      assetClass: "EQUITY" | "BOND";
     } | null;
     thematicTitle: string | null;
     thesis: string;
@@ -124,6 +128,7 @@ export function assembleResearchPacket(input: {
       sector: h.company.sector,
       region: h.company.region,
       assetType: h.company.assetType,
+      assetClass: h.company.assetClass,
       quantity: h.quantity,
       costBasis: h.costBasis,
       currentPrice: h.company.currentPrice,
@@ -143,6 +148,7 @@ export function assembleResearchPacket(input: {
       companyName: o.company!.name,
       region: o.company!.region,
       assetType: o.company!.assetType,
+      assetClass: o.company!.assetClass,
       currentPrice: o.company!.currentPrice,
       thesis: o.thesis,
       conviction: o.conviction,

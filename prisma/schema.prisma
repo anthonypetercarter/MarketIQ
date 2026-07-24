@@ -84,6 +84,16 @@ enum AssetType {
   FUND
 }
 
+/// Orthogonal to AssetType, not a replacement — AssetType (EQUITY vs FUND)
+/// drives the concentration ceiling; AssetClass drives which allocation
+/// category a holding routes into. A bond ETF is both FUND (diversified,
+/// gets the 40% ceiling) and BOND (routes to the real "Bonds" allocation
+/// category instead of equities). See docs/decisions.md.
+enum AssetClass {
+  EQUITY
+  BOND
+}
+
 // -----------------------------------------------------------------------------
 // Core entities
 // -----------------------------------------------------------------------------
@@ -151,6 +161,11 @@ model Company {
   /// concentration ceiling applied and the evidence standard the Council
   /// holds a candidate to. Defaults to EQUITY for every pre-existing row.
   assetType          AssetType     @default(EQUITY)
+  /// Orthogonal to assetType — drives which allocation category a holding
+  /// routes into (Bonds vs Equities), independent of whether it's a
+  /// single security or a fund. Defaults to EQUITY for every pre-existing
+  /// row. See decision #12.
+  assetClass         AssetClass    @default(EQUITY)
   /// SEC's real Central Index Key, cached once looked up (decision #11) —
   /// a CIK never changes, so caching avoids re-fetching SEC's large,
   /// shared ticker-mapping file on every Portfolio Review. Null for a

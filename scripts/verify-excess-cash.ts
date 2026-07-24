@@ -53,6 +53,7 @@ async function main() {
       previousClosePrice: Number(h.company.previousClosePrice),
       region: h.company.region,
       assetType: h.company.assetType,
+      assetClass: h.company.assetClass,
     },
   }));
 

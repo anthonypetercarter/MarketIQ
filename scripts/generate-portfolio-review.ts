@@ -78,6 +78,7 @@ async function main() {
       previousClosePrice: Number(h.company.previousClosePrice),
       region: h.company.region,
       assetType: h.company.assetType,
+      assetClass: h.company.assetClass,
     },
   }));
   const holdingByTicker = new Map(holdingsForCalc.map((h) => [h.company.ticker, h]));
@@ -150,6 +151,7 @@ async function main() {
               currentPrice: Number(o.company.currentPrice),
               region: o.company.region,
               assetType: o.company.assetType,
+              assetClass: o.company.assetClass,
             }
           : null,
         thematicTitle: o.thematicTitle,

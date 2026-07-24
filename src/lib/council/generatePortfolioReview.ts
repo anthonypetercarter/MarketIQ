@@ -114,6 +114,14 @@ function buildSystemPrompt(): string {
       "real, citable evidence — use it, and cite the real figures and real filing date, not just that " +
       '"fundamentals look strong." When `fundamentals` is null — a fund, or a company EDGAR couldn\'t ' +
       "resolve — say so honestly if it's relevant, never invent a number to fill the gap.",
+    "- A holding or candidate's `assetClass` field (EQUITY or BOND) is a separate, real fact from " +
+      "`assetType` (EQUITY or FUND) — a bond ETF is both FUND and BOND at once: FUND for concentration " +
+      "purposes (it's diversified, gets the higher ceiling), BOND for what it actually is. A bond's real " +
+      "evidence shape is genuinely different from a stock's or a diversified equity fund's — real, " +
+      "current facts about yield, duration, and credit quality, or real macro context like the interest-" +
+      "rate environment, not earnings or revenue (bonds don't file 10-Ks the way operating companies do, " +
+      "so `fundamentals` will be null for a bond and that's expected, not a gap). Judge a bond by that " +
+      "real standard, not by trying to force equity-shaped evidence onto it.",
   ].join("\n");
 }
 

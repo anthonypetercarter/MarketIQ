@@ -914,6 +914,85 @@ the same reason as the base integration; needs confirmation via a real
 
 ---
 
+## 12. Bonds — a real, actionable allocation category, via bond ETFs
+
+**Status:** Accepted — implemented and verified against real and synthetic data.
+
+**Context**
+
+Every real Brief has always shown a Bonds allocation target, and the portfolio has always
+shown a real gap against it — but nothing could ever be bought to close that gap. Confirmed
+directly in the code before this change: the entire buy pipeline only ever sorted a holding
+into US or International Equities, driven purely by `region`. There was no real path for a
+bond position to exist in this system at all, and no defined asset type for it either. This
+was a real, honest gap directly connected to the Constitution's own "Capital Preservation
+First" principle — a real institution claiming that value without offering fixed income
+would be a genuine credibility gap, not a minor omission.
+
+**Decision: bond ETFs, not individual bonds, and a genuinely new dimension, not a repurposed one**
+
+Real, liquid bond ETFs (`AGG`, `BND`, `TLT`, `SHY`, `LQD`, `HYG`, `TIP`, etc.) trade on
+regular exchanges exactly like `AAPL` or `VBR` — the entire existing Alpaca pricing and
+paper-portfolio-sync pipeline works completely unchanged for them. Individual bonds and
+T-bills are real and genuinely tradeable through Alpaca's real Fixed Income API, but that's
+documented under Alpaca's Broker API tier — a different product surface than the standard
+account MarketIQ's paper trading already uses — and would need real verification before
+relying on it, plus a materially different trading mechanism (CUSIP/ISIN identifiers,
+order-book pairing during bond market hours, not simple market orders). Bond ETFs were the
+right starting choice on the merits, not just convenience: at this portfolio's real scale,
+individual-bond minimums and OTC spreads would work against a retail-sized account, which
+is exactly why most real individual-investor-facing institutions (robo-advisors, target-date
+funds) use bond funds themselves, not a compromise version of what a pension fund does.
+
+A new `AssetClass` enum (`EQUITY` | `BOND`) was added to `Company`, deliberately orthogonal
+to the existing `AssetType` (`EQUITY` | `FUND`) rather than folded into it. The two answer
+genuinely different questions: `AssetType` drives the concentration ceiling (is this one
+company's idiosyncratic risk, or a diversified basket); `AssetClass` drives which allocation
+category a holding routes into. A bond ETF is both `FUND` (diversified, gets the 40%
+ceiling — that reasoning doesn't change for bonds) and `BOND` (routes to the real "Bonds"
+category instead of equities) at once — two real, independent facts about the same holding,
+not a single field trying to encode both.
+
+`computeCurrentAllocation` now checks `assetClass` first — routing `BOND` holdings into a
+real Bonds bucket regardless of region — before falling through to the existing,
+unchanged region-based equity routing. This matters concretely: a bond ETF is a real,
+domestic-listed ticker, and without this check would have been silently miscounted as a US
+Equity, making the allocation picture actively wrong rather than just incomplete.
+`computeAllocationGaps` needed no changes at all — it already matched categories generically
+by name, so Bonds simply stopped being `NOT_TRACKED` the moment `computeCurrentAllocation`
+started producing a real value for it. Alternatives remains exactly as untracked as before —
+this change was deliberately scoped to Bonds only, not a general fix for every uncovered
+category.
+
+**The Council's evidence standard for a bond is genuinely different, not just less complete.**
+The system prompt now says so explicitly: a bond's real evidence shape is yield, duration,
+and credit quality, or real macro context like the interest-rate environment — not earnings,
+which don't exist for a bond the way they do for an operating company. `fundamentals` will
+correctly be `null` for every bond (bonds don't file 10-Ks), and that's named as expected
+behavior, not a gap to explain away, the same honesty discipline already built for funds.
+
+**What this doesn't do yet, named plainly:** no real, structured bond-specific data source —
+there's no EDGAR-equivalent for yield/duration/credit-quality the way EDGAR solved equity
+fundamentals. Real bond Opportunities will be sourced the same way every equity Opportunity
+was before EDGAR and Track Record existed: real, current research, not an automated feed.
+Individual bonds/T-bills via Alpaca's Broker API remain a real, separate possibility, not
+pursued here.
+
+**Verified:** synthetic tests confirming a bond ETF correctly routes into Bonds rather than
+US Equities despite being domestic-listed, that Bonds becomes a real, gap-computable
+category rather than staying `NOT_TRACKED` while Alternatives correctly remains untouched,
+and that a portfolio holding zero bonds correctly shows a real 0% rather than omitting the
+category or erroring. Also verified end-to-end against real Postgres data: a real bond ETF
+company flowing correctly through `assembleResearchPacket`, carrying both `assetType: FUND`
+and `assetClass: BOND` simultaneously, with `fundamentals: null` (structurally correct,
+never fetched for a bond) and a real, tracked Bonds gap appearing in the actual packet the
+Council would see. One real bug caught and fixed during verification, not left for the
+user to find: the legacy `computeTodaysPlaybook` simulation path
+(`withSimulatedTrade`) constructed a synthetic company object missing the new required
+`assetClass` field — a real type error, not cascade noise, fixed before this shipped.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

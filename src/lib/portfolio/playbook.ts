@@ -56,6 +56,7 @@ interface OpportunityCompany {
   name: string;
   region: "DOMESTIC" | "INTERNATIONAL";
   assetType: "EQUITY" | "FUND";
+  assetClass: "EQUITY" | "BOND";
   currentPrice: number;
 }
 
@@ -210,6 +211,7 @@ function withSimulatedTrade(
         previousClosePrice: company.currentPrice,
         region: company.region,
         assetType: company.assetType,
+        assetClass: company.assetClass,
       },
     },
   ];
