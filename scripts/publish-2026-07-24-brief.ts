@@ -57,6 +57,40 @@ async function main() {
     },
   });
 
+  // Added after the fact: the first version of this Brief only reflected
+  // one general search on the day's dominant macro story, not a real
+  // sector-by-sector pass — a real, honest gap the founder caught and
+  // asked to be corrected. These two are the real result of actually
+  // checking healthcare and energy properly, not just what one broad
+  // search happened to surface.
+  const cvs = await prisma.company.upsert({
+    where: { ticker: "CVS" },
+    update: {},
+    create: {
+      ticker: "CVS",
+      name: "CVS Health Corporation",
+      sector: "Healthcare",
+      currentPrice: 103.61,
+      previousClosePrice: 102.9,
+      region: "DOMESTIC",
+      assetType: "EQUITY",
+    },
+  });
+
+  const fslr = await prisma.company.upsert({
+    where: { ticker: "FSLR" },
+    update: {},
+    create: {
+      ticker: "FSLR",
+      name: "First Solar, Inc.",
+      sector: "Energy",
+      currentPrice: 213.54,
+      previousClosePrice: 211.0,
+      region: "DOMESTIC",
+      assetType: "EQUITY",
+    },
+  });
+
   const decisionRationale =
     "A real, partial relief day, not a full reversal: Intel broke the AI-capex-selloff " +
     "pattern positively with a genuine strong guidance beat, and oil retreated back below " +
@@ -88,10 +122,19 @@ async function main() {
     "partners move from 10% to 12.5%, others stay near where they were. The market's own " +
     "real reaction so far (a modest broad rally, not a selloff) suggests this was largely " +
     "anticipated rather than a fresh shock, though the real, complete economic impact will " +
-    "take time to show up in data. On balance: real, partial improvement, still held to " +
-    "Maintain Current Allocation rather than fully reversing yesterday's caution, with " +
-    "Apple, Microsoft, and Meta earnings next week as the next real test — directly relevant " +
-    "given AAPL is a real, currently-held position.";
+    "take time to show up in data. This Brief was revised after initial publication: the " +
+    "first version reflected one general search on the day's dominant macro story, not a " +
+    "real sector-by-sector pass — a real gap worth correcting rather than leaving as-is. A " +
+    "proper sweep of healthcare and energy specifically surfaced two more real, well-" +
+    "evidenced candidates: CVS Health (a real, structural value case — a fourth consecutive " +
+    "earnings beat and a genuinely working Aetna turnaround, though not fresh news this " +
+    "week) and First Solar (a real Q1 beat with reaffirmed guidance, tied to the same " +
+    "AI/data-center demand theme already prominent this week). Industrials and financials " +
+    "were checked with the same rigor and came up empty for a fresh, individually strong " +
+    "candidate today. On balance: real, partial improvement, still held to Maintain Current " +
+    "Allocation rather than fully reversing yesterday's caution, with Apple reporting " +
+    "specifically on Thursday, July 30 as the next real test directly relevant to a position " +
+    "actually held.";
 
   const historicalSimilarityNarrative =
     "A genuinely mixed day, worth resisting the urge to force into a clean 'good' or 'bad' " +
@@ -338,6 +381,39 @@ async function main() {
         "real merits — today's evidence supports the latter.",
       conviction: 60,
       companyId: intc.id,
+    },
+  });
+
+  await prisma.opportunity.create({
+    data: {
+      briefId: brief.id,
+      thesis:
+        "A real, structural value case, not fresh news this week — worth being honest about " +
+        "that distinction. Real Q1 beat (adjusted EPS $2.57 vs. $2.21 consensus, a 16.47% " +
+        "beat), the fourth consecutive quarterly beat. The Aetna turnaround is the real " +
+        "engine: Health Care Benefits adjusted operating income rose 52.6% to $3.04 billion, " +
+        "and the medical benefit ratio improved from 87.3% to 84.6% — real margin " +
+        "improvement, not just a revenue story. Trades at a real forward P/E of 14, below " +
+        "the healthcare sector's typical high-teens multiple.",
+      conviction: 55,
+      companyId: cvs.id,
+    },
+  });
+
+  await prisma.opportunity.create({
+    data: {
+      briefId: brief.id,
+      thesis:
+        "Also a real, structural case rather than fresh news this week. Real Q1 beat (EPS " +
+        "$3.22 vs. $2.98 consensus, an 8.02% beat), revenue up 23.6% year over year, net " +
+        "income up 65%, adjusted EBITDA at a real 50% margin. Management reaffirmed real " +
+        "full-year guidance, and contracted backlog stood at 47.9 GW. A genuine, current " +
+        "connection to the same AI/data-center demand theme already prominent this week — " +
+        "the EIA's 2026 outlook projects real, substantial electricity demand growth through " +
+        "2050 with data centers as a named accelerant, a structural tailwind for domestic " +
+        "solar capacity specifically.",
+      conviction: 55,
+      companyId: fslr.id,
     },
   });
 
