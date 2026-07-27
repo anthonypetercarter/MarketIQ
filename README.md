@@ -241,6 +241,29 @@ separate possibility, not pursued here. No structured bond-specific data source 
 either (no EDGAR-equivalent for yield/duration) — real bond Opportunities are sourced the
 same way every equity Opportunity was before EDGAR and Track Record existed.
 
+### Real Earnings Calendar — Fixing Reactive Research
+
+`docs/decisions.md` #13. Every real Opportunity until this point surfaced because it
+happened to already be newsworthy enough to appear in a general search — a real,
+structural bias toward already-popular names. `earningsCalendar.ts` answers a different,
+more systematic question instead: who is actually reporting this week, real and dated,
+independent of what's already being written about.
+
+Genuinely free via api-ninjas.com — no credit card. Worth recording a real correction made
+while scoping this: Financial Modeling Prep was the initial choice, but its own FAQ states
+the Earnings Calendar endpoint specifically requires a paid subscription, not included on
+its free tier — caught before building around it, not after. Same pure-client pattern as
+every other market-data source: `fetchUpcomingEarnings` does the real network call,
+`parseEarningsEntries` is a pure function turning the raw response into a clean shape,
+skipping any entry missing a real ticker or date rather than guessing.
+
+Run `npm run data:upcoming-earnings` for the real, dated list for the coming week.
+Deliberately **not** wired into the automated Portfolio Review pipeline — this is a
+standalone research tool whose output seeds real, deliberate research (the same
+EDGAR-plus-news process already used for every real Opportunity), not something acted on
+automatically. An earnings date on its own isn't evidence of anything; it's a signal of
+where to actually look next.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

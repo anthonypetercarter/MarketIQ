@@ -993,6 +993,56 @@ user to find: the legacy `computeTodaysPlaybook` simulation path
 
 ---
 
+## 13. Real earnings calendar — fixing the reactive research bias
+
+**Status:** Accepted — implemented and verified against realistic synthetic data. The live
+fetch itself is unverified in this sandbox (`api.api-ninjas.com` isn't reachable here — same
+category of limitation as every other real external data source) and needs confirmation via
+`npm run data:upcoming-earnings` in a real environment.
+
+**Context**
+
+The founder named a real, precise limitation directly: every real Opportunity so far
+surfaced because it happened to already be newsworthy enough to appear in a general web
+search — not because it was systematically checked. That's a structural bias toward
+already-popular, already-covered names, and it means genuinely undercovered real
+opportunities could exist without ever being found. The fix isn't "search harder" — it's a
+different kind of tool: a real, dated answer to "who is actually reporting this week,"
+independent of what anyone happens to be writing about.
+
+**Real data source, and a real correction made along the way**
+
+Genuinely free — a real API key from api-ninjas.com, no credit card. Worth recording the
+real correction that happened while scoping this: Financial Modeling Prep was initially
+proposed as the primary option, but its own FAQ page states plainly that the Earnings
+Calendar endpoint specifically requires a paid subscription, not included on its free
+250-requests/day tier. Caught before committing to it, not after building around it. One
+honest caveat carried over from API Ninjas' own terms: commercial use isn't permitted on
+the free tier — a non-issue for a personal project, disclosed rather than silently ignored.
+
+**A standalone research tool, deliberately not wired into the automated pipeline**
+
+`src/lib/marketdata/earningsCalendar.ts` follows the same pure-client pattern as every
+other market-data source in this project — `fetchUpcomingEarnings` handles the real network
+call, `parseEarningsEntries` is a pure function that turns the raw response into a clean,
+real shape, skipping any entry missing a real ticker or date rather than guessing.
+`scripts/upcoming-earnings.ts` (`npm run data:upcoming-earnings`) surfaces the real, dated
+list for the coming week. This is deliberately **not** wired into `generate-portfolio-review.ts`
+or any automated flow — its output is meant to seed real, deliberate research (the same
+EDGAR-plus-news process already used for every real Opportunity), not to be acted on
+automatically. A real earnings date on its own isn't evidence of anything; it's only a
+signal of where to actually look next.
+
+**Verified:** four synthetic tests against data shaped like API Ninjas' real, documented
+response — a well-formed real entry parsing correctly, malformed entries (missing ticker,
+missing date, `null`, a non-object) each skipped individually rather than crashing the
+whole batch or fabricating a placeholder, missing EPS/revenue estimates correctly staying
+`null` rather than being guessed at as zero, and a non-array response (an error payload)
+degrading to an empty list rather than throwing. The live fetch itself is unverified here
+for the same reason as every other external integration in this sandbox.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is
