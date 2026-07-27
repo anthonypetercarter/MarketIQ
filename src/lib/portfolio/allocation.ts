@@ -52,24 +52,36 @@ export function computeTotalPortfolioValue(
 }
 
 /** Actual allocation across the four categories now modeled with real holdings — see decision #12 for Bonds. */
+/**
+ * Single source of truth for which allocation category a holding belongs
+ * to — used by computeCurrentAllocation and, per decision #16's addendum,
+ * by category-driven REDUCE sizing too. Extracted so the two can't
+ * silently compute this differently from each other. Bonds are routed by
+ * assetClass first, independent of region — a bond ETF is a real,
+ * domestic-listed ticker, but must never be silently counted as a US
+ * Equity.
+ */
+export function categorizeHolding(
+  company: HoldingWithCompany["company"],
+): "US Equities" | "International Equities" | "Bonds" {
+  if (company.assetClass === "BOND") return "Bonds";
+  return company.region === "DOMESTIC" ? "US Equities" : "International Equities";
+}
+
 export function computeCurrentAllocation(
   holdings: HoldingWithCompany[],
   cashBalance: number,
 ): CurrentAllocationEntry[] {
   const total = computeTotalPortfolioValue(holdings, cashBalance);
 
-  // Bonds are routed by assetClass first, independent of region — a bond
-  // ETF is a real, domestic-listed ticker, but must never be silently
-  // counted as a US Equity. Everything else falls through to the
-  // existing region-based equity routing, unchanged.
   const bondValue = holdings
-    .filter((h) => h.company.assetClass === "BOND")
+    .filter((h) => categorizeHolding(h.company) === "Bonds")
     .reduce((sum, h) => sum + marketValue(h), 0);
   const domesticValue = holdings
-    .filter((h) => h.company.assetClass !== "BOND" && h.company.region === "DOMESTIC")
+    .filter((h) => categorizeHolding(h.company) === "US Equities")
     .reduce((sum, h) => sum + marketValue(h), 0);
   const internationalValue = holdings
-    .filter((h) => h.company.assetClass !== "BOND" && h.company.region === "INTERNATIONAL")
+    .filter((h) => categorizeHolding(h.company) === "International Equities")
     .reduce((sum, h) => sum + marketValue(h), 0);
 
   const pct = (value: number) => (total > 0 ? (value / total) * 100 : 0);

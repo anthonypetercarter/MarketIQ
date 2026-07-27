@@ -1355,6 +1355,58 @@ category-driven trim when the real imbalance clearly calls for it — including,
 whether it reconsiders VBR now that it sits at 40.1%, at or past its own real ceiling as
 well as the largest single contributor to the US Equities overweight.
 
+**Addendum — the real live run confirmed the reasoning worked, and surfaced a real
+sizing gap that made the result useless in practice**
+
+The very next live run did exactly what this decision hoped: VBR received a real REDUCE,
+with the Council explicitly citing the category-rebalancing logic — "trimming would also
+help fund the real underweights in international equities and cash." The reasoning worked
+on the first real try. But the actual computed trade was **"sell 1 share (~$245.50
+proceeds)"** — real, but functionally meaningless against a real ~20-point US Equities
+overweight. The reasoning and the mechanics were answering two different real questions:
+the Council correctly judged that a meaningful rebalancing trim was warranted; the only
+sizing math REDUCE has ever had (`computeReduceToConcentrationCeiling`) only ever
+answers "how much is this position over its _own_ ceiling" — and VBR was barely over that
+ceiling (40.1%), so that's the tiny, real, honest number it produced. Not a bug in the
+existing function; a real gap in what question it was ever built to answer.
+
+**The fix, deliberately still free of any return forecasting.** A new
+`computeCategoryOverweightValue` computes the real, current dollar amount a category is
+over its own target — pure current-state arithmetic, not a prediction about which category
+will perform better. `sizeCategoryRebalanceReduces` sizes one or more REDUCE-verdict
+holdings against that real, shared, shrinking dollar gap — the sell-side mirror of the
+shared Excess Cash pool multiple new BUYs already compete for, bounded by both the real
+remaining gap and each position's own real current value (never oversold beyond what a
+holding is actually worth). _Which_ holding gets picked for REDUCE stays exactly where it
+already was — the Council's own real, evidenced judgment (the original decision above);
+this only fixes how much gets sold once a specific ticker is chosen, the same clean split
+between selection and sizing that governs every other verdict type.
+
+A `categorizeHolding` helper was extracted from `computeCurrentAllocation` so the category
+logic used for sizing can never silently drift from the category logic used to compute the
+real gaps in the first place — one real, shared source of truth for what "US Equities,"
+"International Equities," and "Bonds" actually mean, refactored and re-verified to produce
+byte-identical results to the pre-refactor version before anything new was built on it.
+
+When both the concentration-ceiling trim and the category-rebalancing trim apply to the
+same holding, the real, larger one is used — either real, independent justification
+supports at least that much of a trim, so the more complete real correction wins rather
+than picking one mechanism arbitrarily over the other.
+
+**Verified:** synthetic tests confirming the real category overweight computes correctly
+in dollars (and correctly returns 0, not negative, for a genuinely underweight category),
+a single holding sized correctly against the real gap, two holdings in the same category
+correctly sharing one real, shrinking pool (the second holding correctly receiving nothing
+when only enough real gap remained for a fraction of one share — the same "don't
+fabricate a partial share" discipline already used for BUYs), and a small position
+correctly bounded by its own real value rather than an impossible oversell. The refactored
+`categorizeHolding` was verified to produce byte-identical output to the pre-refactor
+logic. Most importantly, the exact real scenario from the live run was replicated
+directly: the old mechanism alone produces the real 2-share, ~$491 trim; the new,
+combined logic correctly produces an 80-share, ~$19,640 trim instead — a real, meaningful
+correction to the actual imbalance the founder flagged, not the near-useless number the
+first version of this decision shipped with.
+
 ---
 
 # North Star Vision

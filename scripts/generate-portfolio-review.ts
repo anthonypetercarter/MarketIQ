@@ -20,12 +20,15 @@ import {
   computeCurrentAllocation,
   computeAllocationGaps,
   computeTotalPortfolioValue,
+  categorizeHolding,
   marketValue,
 } from "../src/lib/portfolio/allocation";
 import {
   computeExcessCash,
   sizeApprovedBuys,
   computeReduceToConcentrationCeiling,
+  computeCategoryOverweightValue,
+  sizeCategoryRebalanceReduces,
   computeExitSizing,
 } from "../src/lib/portfolio/playbook";
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
@@ -238,17 +241,65 @@ async function main() {
     });
   }
 
-  // Sell-side: REDUCE only produces a real trade when the position is
-  // actually over its own concentration ceiling — a qualitative REDUCE
-  // issued for a different reason has no mechanical trim to compute yet,
-  // and is shown honestly as such rather than guessed at. EXIT is always
-  // computable (full liquidation).
+  // Sell-side: REDUCE can be sized two real, independent ways — over its
+  // own concentration ceiling (unchanged), or as part of a genuine
+  // category rebalance (decision #16's addendum): trimming to help close
+  // a real, disclosed overweight in the category this holding belongs
+  // to. Multiple REDUCEs in the same overweight category share one real,
+  // shrinking "gap to close" — the sell-side mirror of the shared cash
+  // pool new BUYs already compete for. Whichever real mechanism produces
+  // the larger trim is used; if neither applies, the honest "no
+  // mechanical trim" fallback still shows, same as before. EXIT is
+  // always computable (full liquidation).
   const reduceVerdicts = result.verdicts.filter((v) => v.verdict === "REDUCE" && v.validated);
+
+  const reduceHoldingsByCategory = new Map<string, typeof holdingsForCalc>();
   for (const v of reduceVerdicts) {
     const holding = holdingByTicker.get(v.ticker);
-    const trade = holding
+    if (!holding) continue;
+    const category = categorizeHolding(holding.company);
+    const existing = reduceHoldingsByCategory.get(category) ?? [];
+    existing.push(holding);
+    reduceHoldingsByCategory.set(category, existing);
+  }
+
+  const categoryDrivenTradeByTicker = new Map<
+    string,
+    { sharesToSell: number; estimatedProceeds: number }
+  >();
+  for (const [category, categoryHoldings] of reduceHoldingsByCategory) {
+    const categoryOverweightValue = computeCategoryOverweightValue(
+      gaps,
+      category,
+      totalPortfolioValue,
+    );
+    if (categoryOverweightValue <= 0) continue;
+    const sized = sizeCategoryRebalanceReduces({
+      holdings: categoryHoldings,
+      categoryOverweightValue,
+    });
+    for (const [ticker, trade] of sized) {
+      categoryDrivenTradeByTicker.set(ticker, trade);
+    }
+  }
+
+  for (const v of reduceVerdicts) {
+    const holding = holdingByTicker.get(v.ticker);
+    const concentrationTrade = holding
       ? computeReduceToConcentrationCeiling(holding, totalPortfolioValue)
       : null;
+    const categoryTrade = categoryDrivenTradeByTicker.get(v.ticker) ?? null;
+
+    // Either real, independent justification supports at least that much
+    // of a trim — take whichever is larger rather than picking one
+    // arbitrarily over the other.
+    const trade =
+      concentrationTrade && categoryTrade
+        ? concentrationTrade.estimatedProceeds >= categoryTrade.estimatedProceeds
+          ? concentrationTrade
+          : categoryTrade
+        : (concentrationTrade ?? categoryTrade);
+
     todaysActions.push({
       ticker: v.ticker,
       companyName: v.companyName,

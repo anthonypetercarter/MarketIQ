@@ -350,29 +350,38 @@ accelerating, currently-positive growth.
 
 ### REDUCE for Real Category Rebalancing, Not Only Concentration Breaches
 
-`docs/decisions.md` #16 — a prompt-level directive, not deterministic logic; unlike every
-other recent decision, there's no pure function to verify with synthetic data here. A real,
-live portfolio surfaced the actual gap: the Council was already using real allocation gaps
-to decline new buys in an overweight category, but nothing told it to consider the other
-half of the same logic — trimming an _existing_ holding in that overweight category
-specifically to help fund a genuinely underweight one.
+`docs/decisions.md` #16. A real, live portfolio surfaced the actual gap: the Council was
+already using real allocation gaps to decline new buys in an overweight category, but
+nothing told it to consider the other half of the same logic — trimming an _existing_
+holding in that overweight category specifically to help fund a genuinely underweight
+one. The prompt-level directive worked on the very first live run: VBR received a real
+REDUCE, with the Council explicitly citing the category-rebalancing logic. But the actual
+trade computed was "sell 1 share (~$245.50)" — real, but functionally meaningless against
+a ~20-point real overweight, because the only sizing math REDUCE ever had
+(`computeReduceToConcentrationCeiling`) only answers "how much is this position over its
+own ceiling," and VBR was barely over that.
 
-Deliberately not a new deterministic calculation. A fully rigorous version would need real
-forward-looking expected returns nobody actually has with confidence — fabricating that
-would be exactly the manufactured precision this project avoids everywhere else. Instead,
-the Council's system prompt now explicitly asks it to compare holdings _within_ an
-overweight category against each other — which one has a comparatively weaker or staler
-thesis — using evidence it already has, not a speculative forecast. Deliberately not
-automatic either: a real overweight, by itself, doesn't automatically justify trimming a
-position with a real, intact thesis.
+The fix, still free of any return forecasting: `computeCategoryOverweightValue` computes
+the real, current dollar amount a category is over its own target — pure current-state
+math, not a prediction about which category performs better. `sizeCategoryRebalanceReduces`
+sizes one or more REDUCE-verdict holdings against that real, shared, shrinking dollar gap
+— the sell-side mirror of the shared cash pool multiple new BUYs already compete for,
+bounded by both the real remaining gap and each position's own real value. _Which_ holding
+gets picked for REDUCE stays exactly where it was — the Council's own real, evidenced
+judgment; this only fixes how much gets sold once a ticker is chosen. When both the
+concentration-ceiling trim and the category-rebalancing trim apply, the real, larger one
+wins — either real, independent justification supports at least that much of a trim. A
+new `categorizeHolding` helper, extracted from `computeCurrentAllocation` and re-verified
+to produce byte-identical results, keeps the category logic used for sizing and for
+computing the real gaps from ever silently drifting apart.
 
-One real, honest downstream consequence, not a gap: a REDUCE issued for this new reason
-will often show the existing "no mechanical trim computed" fallback, since
-`computeReduceToConcentrationCeiling` only sizes a real trim when a position exceeds its
-_own_ ceiling — which a category-driven REDUCE frequently won't. Correct, honest behavior
-for a genuinely qualitative call, not something to paper over with an invented number. The
-real test of this decision is the Council's actual next live run, not anything verifiable
-in advance.
+**Verified:** the exact real scenario from the live run was replicated directly — the old
+mechanism alone produces the real 2-share, ~$491 trim; the new, combined logic correctly
+produces an 80-share, ~$19,640 trim instead, a real, meaningful correction rather than the
+near-useless number the first version shipped with. Also verified: correct real dollar
+computation for a genuine overweight (and a correct 0, not negative, for an underweight),
+two holdings correctly sharing one real, shrinking pool, and a small position correctly
+bounded by its own real value rather than an impossible oversell.
 
 ### Paper Portfolio Sync
 

@@ -97,6 +97,66 @@ export function computeReduceToConcentrationCeiling(
   return { sharesToSell, estimatedProceeds: sharesToSell * holding.company.currentPrice };
 }
 
+/**
+ * Real, current dollar amount a category is over its own target — the
+ * measuring stick for a category-driven REDUCE (decision #16's
+ * addendum). Deliberately just current-state math: how far off-target
+ * is this category, in real dollars, right now — no forecasting which
+ * category will perform better, which nobody actually knows with
+ * confidence. Returns 0 (not negative) when the category is at or under
+ * target — there's no real overweight to correct.
+ */
+export function computeCategoryOverweightValue(
+  gaps: AllocationGap[],
+  category: string,
+  totalPortfolioValue: number,
+): number {
+  const gap = gaps.find((g) => g.category === category);
+  if (!gap || gap.actualPercent === null) return 0;
+  const overweightPoints = gap.actualPercent - gap.targetPercent;
+  if (overweightPoints <= 0) return 0;
+  return (overweightPoints / 100) * totalPortfolioValue;
+}
+
+/**
+ * Sizes one or more Council-approved category-rebalancing REDUCE
+ * verdicts against a shared, finite "gap to close" for one real,
+ * overweight category — the sell-side mirror of sizeApprovedBuys'
+ * shared cash pool. Which holdings get a REDUCE, and in what order, is
+ * the Council's real, evidenced judgment (decision #16); this function
+ * only turns that decision into real share counts. Each trim is bounded
+ * by the real, remaining category gap AND the position's own real
+ * current value — never sells more than a holding actually has, and
+ * never sells more, in total across every holding processed, than the
+ * category is actually over by.
+ */
+export function sizeCategoryRebalanceReduces(input: {
+  /** The REDUCE-verdict holdings within one overweight category, in the order to process them. */
+  holdings: HoldingWithCompany[];
+  categoryOverweightValue: number;
+}): Map<string, HoldingSizing> {
+  let remainingGap = input.categoryOverweightValue;
+  const results = new Map<string, HoldingSizing>();
+
+  for (const holding of input.holdings) {
+    if (remainingGap <= 0) break;
+
+    const positionValue = marketValue(holding);
+    const trimValue = Math.min(remainingGap, positionValue);
+    const sharesToSell = Math.min(
+      Math.floor(trimValue / holding.company.currentPrice),
+      holding.quantity,
+    );
+    if (sharesToSell < 1) continue;
+
+    const estimatedProceeds = sharesToSell * holding.company.currentPrice;
+    results.set(holding.company.ticker, { sharesToSell, estimatedProceeds });
+    remainingGap -= estimatedProceeds;
+  }
+
+  return results;
+}
+
 /** EXIT mechanics — full liquidation. No new sizing logic needed beyond selling everything held. */
 export function computeExitSizing(holding: HoldingWithCompany): HoldingSizing {
   return { sharesToSell: holding.quantity, estimatedProceeds: marketValue(holding) };
