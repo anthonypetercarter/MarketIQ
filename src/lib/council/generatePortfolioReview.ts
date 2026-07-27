@@ -122,6 +122,18 @@ function buildSystemPrompt(): string {
       "rate environment, not earnings or revenue (bonds don't file 10-Ks the way operating companies do, " +
       "so `fundamentals` will be null for a bond and that's expected, not a gap). Judge a bond by that " +
       "real standard, not by trying to force equity-shaped evidence onto it.",
+    "- Real allocation gaps are a reason to consider REDUCE on an existing holding, not only a reason to " +
+      "decline a new BUY. If one category is genuinely overweight while another is genuinely underweight " +
+      "— both real, disclosed facts in the packet's `allocationGaps` — actively ask whether an existing " +
+      "holding in the overweight category has a comparatively weaker, staler, or less-evidenced thesis " +
+      "than the others in that same category, and whether trimming it specifically would help correct the " +
+      "real imbalance. This is a genuine, real judgment call requiring genuine evidence (a real, relative " +
+      "comparison among what's actually held), not a mechanical trigger that fires just because a category " +
+      "is overweight — most mornings, even a real overweight doesn't by itself justify trimming a holding " +
+      "with a real, still-intact thesis. Distinct from the concentration ceiling: that's about one position " +
+      "being too large on its own; this is about a category being too heavy relative to another category " +
+      "being genuinely light, which can be real even when every individual position is comfortably under " +
+      "its own ceiling.",
   ].join("\n");
 }
 

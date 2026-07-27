@@ -348,6 +348,32 @@ revenue-based factor is cheaper than one needing two real facts. Run `npm run
 research:screen-growth` for a real, current shortlist of companies with genuinely
 accelerating, currently-positive growth.
 
+### REDUCE for Real Category Rebalancing, Not Only Concentration Breaches
+
+`docs/decisions.md` #16 — a prompt-level directive, not deterministic logic; unlike every
+other recent decision, there's no pure function to verify with synthetic data here. A real,
+live portfolio surfaced the actual gap: the Council was already using real allocation gaps
+to decline new buys in an overweight category, but nothing told it to consider the other
+half of the same logic — trimming an _existing_ holding in that overweight category
+specifically to help fund a genuinely underweight one.
+
+Deliberately not a new deterministic calculation. A fully rigorous version would need real
+forward-looking expected returns nobody actually has with confidence — fabricating that
+would be exactly the manufactured precision this project avoids everywhere else. Instead,
+the Council's system prompt now explicitly asks it to compare holdings _within_ an
+overweight category against each other — which one has a comparatively weaker or staler
+thesis — using evidence it already has, not a speculative forecast. Deliberately not
+automatic either: a real overweight, by itself, doesn't automatically justify trimming a
+position with a real, intact thesis.
+
+One real, honest downstream consequence, not a gap: a REDUCE issued for this new reason
+will often show the existing "no mechanical trim computed" fallback, since
+`computeReduceToConcentrationCeiling` only sizes a real trim when a position exceeds its
+_own_ ceiling — which a category-driven REDUCE frequently won't. Correct, honest behavior
+for a genuinely qualitative call, not something to paper over with an invented number. The
+real test of this decision is the Council's actual next live run, not anything verifiable
+in advance.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

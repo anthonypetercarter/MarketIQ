@@ -1301,6 +1301,62 @@ worth deciding deliberately later rather than folded in silently now.
 
 ---
 
+## 16. REDUCE for real category rebalancing, not only concentration breaches
+
+**Status:** Accepted — a prompt-level directive, not deterministic logic. Unlike every
+other recent decision, there is no pure function to verify with synthetic data here; the
+real test is the Council's actual behavior on its next live run, not something confirmable
+in advance.
+
+**Context**
+
+A real, live portfolio surfaced the actual gap directly: US Equities at roughly 73%
+against a 53% target, International at 6.6% against 14%, cash near 1.8% against a 10%
+target. The Council had already been correctly using real allocation gaps — but only in
+one direction, declining new candidates (AZN, PFE) because a category was already
+overweight. Nothing told it to consider the other half of the same real logic: actively
+trimming an existing, already-held position in the overweight category specifically to
+help fund the genuinely underweight one. Two separate, real mechanisms already existed and
+neither did this — `computeReduceToConcentrationCeiling` triggers only when one position
+exceeds its own individual ceiling (a real, different question), and the Council's
+allocation-awareness only ever gated new buys.
+
+**Why this isn't a deterministic calculation, and shouldn't be dressed up as one**
+
+A fully rigorous version would need real, forward-looking expected returns for "keep this
+position" versus "reallocate into what's underweight" — nobody actually has that with real
+confidence, and fabricating it would be exactly the kind of manufactured precision this
+project has been careful to avoid everywhere else (Track Record's honest `too_early`
+state, EDGAR's honest `null` fundamentals, the Quality screen's disclosed fiscal-year
+fuzziness). Instead: a real, explicit instruction added to the Council's system prompt,
+asking it to compare holdings _within_ an overweight category against each other — which
+one has a comparatively weaker, staler, or less-evidenced thesis than the others — using
+evidence it already has (its own review of each position, Track Record once enough real
+history exists), not a speculative forecast.
+
+**Deliberately not automatic or mandatory.** The directive is explicit that a real
+overweight, by itself, doesn't automatically justify trimming a position with a real,
+still-intact thesis — most mornings, even a genuine imbalance shouldn't force a sale. The
+judgment stays real and case-by-case, the same discipline as every other verdict.
+
+**A real, honest downstream consequence, not a gap to fix here:** a REDUCE issued for this
+new, category-driven reason will very often show the existing "approved, but no mechanical
+trim computed" fallback (`docs/decisions.md`'s Today's Actions addendum) — `computeReduceToConcentrationCeiling`
+only computes a real share count when a position is over its _own_ ceiling, which a
+category-rebalancing REDUCE frequently won't be. That's the correct, honest behavior for a
+genuinely qualitative decision, not something this decision tries to paper over with an
+invented number.
+
+**Unverified in the way every other recent decision has been.** This is a change to what
+the Council reasons about, not a new calculation — there's no synthetic input to construct
+and check against an expected output the way Quality's or Growth's join-and-filter logic
+could be. The real, only test is whether the Council's next live run actually weighs a
+category-driven trim when the real imbalance clearly calls for it — including, concretely,
+whether it reconsiders VBR now that it sits at 40.1%, at or past its own real ceiling as
+well as the largest single contributor to the US Equities overweight.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is
