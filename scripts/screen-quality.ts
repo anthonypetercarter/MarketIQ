@@ -2,7 +2,8 @@
  * The first real, market-wide Quality screen (decision #14): fetches
  * real net income and revenue across every reporting company for two
  * real periods, and surfaces which real companies — above a $1B revenue
- * floor — have genuinely improving margins. A standalone research tool,
+ * floor, and genuinely profitable today, not just less unprofitable than
+ * before — have real, improving margins. A standalone research tool,
  * not wired into automated Portfolio Review: its output seeds real,
  * deliberate research (the same EDGAR-plus-news process used for every
  * real Opportunity), not something acted on automatically.
@@ -57,7 +58,7 @@ async function main() {
   console.log(`  ${priorNetIncome.length} real companies.`);
 
   console.log(
-    `\nJoining by CIK, applying the real $${MIN_REVENUE_FLOOR / 1_000_000_000}B revenue floor...`,
+    `\nJoining by CIK, applying the real $${MIN_REVENUE_FLOOR / 1_000_000_000}B revenue floor and requiring a genuinely positive current margin...`,
   );
   const results = computeQualityScreen({
     currentRevenue,

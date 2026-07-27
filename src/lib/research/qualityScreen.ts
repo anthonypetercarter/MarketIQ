@@ -5,7 +5,7 @@
  * equities-only; funds don't file the operating financial statements
  * this reads at all (see decision #12's asset-class boundary).
  *
- * Two real design decisions locked in before building, not defaults
+ * Three real design decisions locked in before building, not defaults
  * picked silently:
  *
  * - A $1B trailing-revenue floor, applied here (after the real Frame
@@ -20,6 +20,17 @@
  *   against itself. Trying to force every company onto a strict calendar
  *   quarter would penalize genuinely good, legitimate businesses for an
  *   irrelevant reason (Apple's own real fiscal year ends in September).
+ * - The current period's margin must itself be genuinely positive, not
+ *   just improving. The first real run against live data caught this the
+ *   hard way: ranking purely by percentage-point improvement rewarded
+ *   "went from disastrous to merely bad" (a company still at -71.6%
+ *   margin ranked #1) over a company that was already solid and got
+ *   better. A large, still-unprofitable company deliberately reinvesting
+ *   for growth is a real, legitimate story — it's just a different real
+ *   question ("is this company growing fast") than the one Quality is
+ *   built to answer ("is this business profitable, and getting more
+ *   so"). That story belongs to a future, separate Growth signal, not to
+ *   a loosened version of this one.
  */
 
 import type { FrameEntry } from "@/lib/marketdata/edgar";
@@ -40,8 +51,8 @@ export interface QualityScreenResult {
  * appear in all four — current & prior revenue, current & prior net
  * income — or it's skipped, not guessed at with a partial picture),
  * computes each company's real margin for both periods, applies the real
- * revenue floor, and returns results sorted by the most genuinely
- * improving margin first.
+ * revenue floor and the real positive-current-margin requirement, and
+ * returns results sorted by the most genuinely improving margin first.
  */
 export function computeQualityScreen(input: {
   currentRevenue: FrameEntry[];
@@ -74,6 +85,12 @@ export function computeQualityScreen(input: {
 
     const currentMarginPercent = (curNI.val / curRev.val) * 100;
     const priorMarginPercent = (priorNI.val / priorRev.val) * 100;
+
+    // Quality means genuinely profitable AND improving, not just "less
+    // distressed than before" — a company still losing money today
+    // doesn't belong on this specific list, however much better it's
+    // gotten. See the module-level doc comment for the real reasoning.
+    if (currentMarginPercent <= 0) continue;
 
     results.push({
       cik,

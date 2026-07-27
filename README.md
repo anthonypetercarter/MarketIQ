@@ -297,20 +297,30 @@ issue), and one real Frame alone returns 6,000+ companies including genuine nois
 
 `src/lib/research/qualityScreen.ts`'s `computeQualityScreen` is a pure function joining
 real revenue and net income across two real periods by CIK, requiring complete data in all
-four datasets or skipping a company entirely (never a partial or guessed-at result). Two
+four datasets or skipping a company entirely (never a partial or guessed-at result). Three
 real decisions, reasoned through rather than defaulted to: a **$1B trailing-revenue
 floor**, applied as free local filtering after the fetch, to keep results in the same
-weight class as what's already seriously held; and fiscal-year misalignment **disclosed,
-not corrected** — a company's own real margin trend is unaffected by when its fiscal year
+weight class as what's already seriously held; fiscal-year misalignment **disclosed, not
+corrected** — a company's own real margin trend is unaffected by when its fiscal year
 lands, and forcing calendar alignment would penalize genuinely good businesses (Apple's
-own real fiscal year ends in September) for an irrelevant reason. One further real,
-disclosed gap: only the primary `Revenues` tag is used for now, not the full fallback list
-already built for per-company lookups — a company using the alternate tag is missing from
-results, not misrepresented.
+own real fiscal year ends in September) for an irrelevant reason; and — caught by the
+first real, live run, not anticipated in advance — the **current period's margin must
+itself be genuinely positive**, not merely improved. That first run ranked a company still
+at a real -71.6% margin above genuine turnaround stories like Robinhood and Coinbase,
+purely because raw point-improvement rewards "less disastrous" over "already good." A
+large, still-unprofitable company deliberately reinvesting for growth is real and
+legitimate — it's just answering Growth's real question, not Quality's, and belongs to a
+future, separate Growth screen rather than a loosened Quality one. See `docs/decisions.md`
+#14's addendum for the full reasoning, including a real correction: Amazon was raised as an
+example of this pattern, but Amazon's real, current net margin is 12.22% — it's been
+solidly profitable since roughly 2020, not the near-breakeven story it was a decade ago.
+One further real, disclosed gap: only the primary `Revenues` tag is used for now, not the
+full fallback list already built for per-company lookups — a company using the alternate
+tag is missing from results, not misrepresented.
 
-Run `npm run research:screen-quality` for a real, current shortlist of companies with
-genuinely improving margins. Standalone research tool, same as the earnings calendar —
-seeds real, deliberate research, not acted on automatically.
+Run `npm run research:screen-quality` for a real, current shortlist of companies that are
+genuinely profitable today and getting more so. Standalone research tool, same as the
+earnings calendar — seeds real, deliberate research, not acted on automatically.
 
 ### Paper Portfolio Sync
 

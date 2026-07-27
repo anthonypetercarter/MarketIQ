@@ -1172,6 +1172,53 @@ entirely rather than given a partial or fabricated result. The live, four-Frame 
 itself is unverified in this sandbox for the same reason as every other external
 integration here.
 
+**Addendum — a real flaw the first live run caught immediately, and a deliberate
+boundary decision made in response**
+
+The first real run against live data — genuinely working end to end, 693 real companies
+passing the floor — surfaced a real, substantive problem in what it ranked highest, not
+just a cosmetic one. Ranking purely by percentage-point margin change rewarded "went from
+disastrous to merely bad" over "was already solid and got better": the top result was a
+company whose current real margin was still **-71.6%**, genuinely still losing money, just
+somewhat less of it than the year before. Several of the top 15 were in the same real
+shape. Meanwhile two genuine standouts — Robinhood (moving from -29.0% to a real +47.8%)
+and Coinbase (from +3.2% to +39.6%) — ranked below several still-distressed names purely
+because the raw point-swing arithmetic favors bigger changes regardless of where a company
+actually ends up.
+
+The founder raised a real, important pushback before accepting the obvious fix (current
+margin must be positive): what about large, genuinely valuable companies that deliberately
+run thin or negative margins by design, reinvesting everything into growth? Amazon was
+raised as the example — worth recording the real correction made in response: Amazon
+isn't actually that company anymore. Real, confirmed current data: a 12.22% net margin as
+of March 2026, solidly and reliably profitable since roughly 2020 as AWS's high-margin
+cloud business came to subsidize and exceed what the lower-margin retail side needs. The
+real "barely profitable Amazon" story is genuine, but roughly a decade stale — true of
+2013-2015, not now.
+
+The underlying point survived the correction to its example, though: a real company
+deliberately choosing not to be profitable yet, in service of real growth, is a genuine,
+legitimate story a real investor might value — it's just answering a different real
+question than Quality is built to ask. Quality asks "is this business profitable, and
+getting more so"; a reinvestment-over-profit story is really answering "is this company
+growing fast," which is Growth's real question, not Quality's. Deliberately keeping these
+as two separate, single-purpose signals — rather than loosening Quality to also catch
+Growth's story — is the same discipline that motivated building one factor at a time in
+the first place: a screen that tries to answer two different real questions at once ends
+up answering neither cleanly.
+
+**Decision:** `computeQualityScreen` now requires the current period's margin to be
+genuinely positive, not merely improved. A large, still-unprofitable company deliberately
+reinvesting for growth is real and legitimate — and a real candidate for a future, separate
+Growth screen, not for a loosened Quality one.
+
+**Verified:** three new synthetic tests, including one modeled directly on the real,
+live-discovered problem case — a company still at a deeply negative current margin despite
+a huge real point-improvement is now correctly excluded entirely, not just deprioritized.
+A genuinely newly-profitable turnaround (modeled on the real Robinhood pattern) and a
+mature, already-profitable company with modest real improvement (modeled on Amazon's own
+real, current ~9-12% margin) are both correctly kept.
+
 ---
 
 # North Star Vision
