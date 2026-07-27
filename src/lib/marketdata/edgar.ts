@@ -212,3 +212,36 @@ export async function fetchFundamentalsResilient(
     return null;
   }
 }
+
+/**
+ * A given real fact (e.g., NetIncomeLoss) across every real company that
+ * reported it for a given real period, in one call — the foundation for
+ * any real, market-wide screen. `period` uses SEC's real calendar-period
+ * format: "CY2024Q4" for a quarterly duration fact (revenue, net income),
+ * "CY2024Q4I" (the I suffix) for an instantaneous, point-in-time fact
+ * (assets, liabilities, as reported on a specific date rather than
+ * accumulated over a period).
+ *
+ * Deliberately returns the raw, unparsed response for now rather than a
+ * typed shape — after the /v1/upcomingearnings mistake, this project's
+ * discipline is to confirm a real response's actual structure before
+ * writing parsing logic that assumes one. Real, exact field names get
+ * added to a typed parser once the first real call confirms them.
+ */
+export async function fetchFrame(
+  taxonomy: string,
+  concept: string,
+  unit: string,
+  period: string,
+): Promise<unknown> {
+  const response = await fetch(
+    `https://data.sec.gov/api/xbrl/frames/${taxonomy}/${concept}/${unit}/${period}.json`,
+    { headers: { "User-Agent": requireUserAgent() } },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `SEC frames request failed for ${taxonomy}/${concept}/${unit}/${period}: ${response.status}`,
+    );
+  }
+  return response.json();
+}
