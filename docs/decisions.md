@@ -1277,6 +1277,28 @@ accelerating, currently-growing company correctly kept, a real sub-$1B company c
 excluded by the floor even with strong growth, and a company missing from one of the three
 real periods correctly skipped entirely rather than given a partial result.
 
+**Addendum — both screens adopted as standing inputs to the real research process**
+
+A live run of Growth independently surfaced the same real insurance cluster (Lincoln
+National, Equitable Financial, Jackson Financial, Brighthouse) that Quality's own live run
+had already found — two separate, independent real screens corroborating each other on the
+same sector, a meaningfully stronger real signal than either alone would be. The same run
+also surfaced a real, honest data quirk worth knowing rather than treating as a bug: Howard
+Hughes appeared twice, under two distinct real CIKs ("The Howard Hughes Corporation" and
+"Howard Hughes Holdings Inc."), almost certainly the same real company under two SEC-
+registered entity names from a real corporate restructuring — a genuine consequence of
+joining by CIK, not something to silently paper over.
+
+**Decision:** both `npm run research:screen-quality` and `npm run research:screen-growth`
+are now a standing, regular part of real Brief research — alongside the existing
+sector-by-sector search, not replacing it. Real news search catches what a quantitative
+screen structurally can't (Intel's earnings beat, a tariff announcement); Quality and
+Growth catch what news search structurally can't (a company with genuinely improving real
+fundamentals that hasn't made headlines yet). Deliberately kept as two separate, distinct
+lists rather than merged into one combined score — each answers its own real question
+cleanly, and combining them would be a different, real investment thesis of its own,
+worth deciding deliberately later rather than folded in silently now.
+
 ---
 
 # North Star Vision
