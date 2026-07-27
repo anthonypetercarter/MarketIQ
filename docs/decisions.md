@@ -1041,6 +1041,43 @@ whole batch or fabricating a placeholder, missing EPS/revenue estimates correctl
 degrading to an empty list rather than throwing. The live fetch itself is unverified here
 for the same reason as every other external integration in this sandbox.
 
+**Addendum — a real correction, caught by a live 400 error, not by more careful reading in
+advance**
+
+The first version shipped above was built against `/v1/upcomingearnings`. Running it for
+real produced an immediate `400`. Pulling the complete, real API Ninjas documentation page
+(not just a search summary, which is what led to the miss) showed the actual cause
+plainly: that endpoint is labeled **Premium Only** directly in its own header — invisible
+in the earlier search snippet, which showed sample requests and responses (normal even for
+gated endpoints) without surfacing the access-tier label clearly. A real, honest mistake:
+the FMP correction earlier in this same decision came from reading a FAQ page carefully;
+this one should have gotten the same treatment and didn't.
+
+Rebuilt against `/v1/earningscalendar` instead — not gated at the endpoint level, though
+several individual response fields (`estimated_revenue`, `estimated_eps`,
+`earnings_timing`, and the `show_upcoming` parameter that forces forward-looking results)
+remain premium-only. One more real, non-obvious detail this correction surfaced: the two
+endpoints use genuinely different parameter names for the same concept —
+`start_date`/`end_date` on the gated endpoint, `date_start`/`date_end` on this one — an
+easy mistake to make by assuming consistency that doesn't actually exist across a single
+vendor's own API surface.
+
+**A genuine open question, stated as such rather than assumed either way:** whether
+querying this endpoint with a future date range returns real, forward-looking earnings on
+the free tier, or comes back empty because `show_upcoming`'s premium gate controls that
+specific behavior, is unresolved as of this writing. `scripts/upcoming-earnings.ts` reports
+an empty result as real, informative evidence toward answering that question — not silently
+as if it were success — rather than asserting a confident answer this session couldn't
+actually verify.
+
+**Also re-verified:** the parsing logic was rebuilt for the new, real response shape
+(`fiscal_year`, `fiscal_quarter`, `actual_revenue`, `actual_eps` — genuinely different
+fields from the first attempt) and gained a new, real test this specific mistake
+surfaced: a premium field returned by the free tier as an upgrade-message _string_ rather
+than a number, confirmed to parse as `null` rather than being silently coerced into a
+fabricated numeric value — a real, silent-corruption bug this correction specifically
+exists to prevent, not a hypothetical one.
+
 ---
 
 # North Star Vision

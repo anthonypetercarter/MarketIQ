@@ -249,13 +249,18 @@ structural bias toward already-popular names. `earningsCalendar.ts` answers a di
 more systematic question instead: who is actually reporting this week, real and dated,
 independent of what's already being written about.
 
-Genuinely free via api-ninjas.com — no credit card. Worth recording a real correction made
-while scoping this: Financial Modeling Prep was the initial choice, but its own FAQ states
-the Earnings Calendar endpoint specifically requires a paid subscription, not included on
-its free tier — caught before building around it, not after. Same pure-client pattern as
-every other market-data source: `fetchUpcomingEarnings` does the real network call,
-`parseEarningsEntries` is a pure function turning the raw response into a clean shape,
-skipping any entry missing a real ticker or date rather than guessing.
+Genuinely free via api-ninjas.com — no credit card. Worth recording two real corrections
+made along the way, not smoothed over: Financial Modeling Prep was the initial choice, but
+its own FAQ states the Earnings Calendar endpoint requires a paid subscription. Then, after
+switching to API Ninjas, the first real run against `/v1/upcomingearnings` returned a live
+`400` — that endpoint turned out to be fully premium-gated too, missed in an earlier search
+summary and only caught by actually running it. Rebuilt against `/v1/earningscalendar`
+instead, which is free at the endpoint level. Whether it returns real, forward-looking data
+on the free tier remains a genuine open question — see `docs/decisions.md` #13's addendum.
+Same pure-client pattern as every other market-data source: `fetchEarningsCalendar` does
+the real network call, `parseEarningsCalendarEntries` is a pure function turning the raw
+response into a clean shape, treating a premium field returned as an upgrade-message
+string the same as genuinely missing data (`null`), never coerced into a fabricated number.
 
 Run `npm run data:upcoming-earnings` for the real, dated list for the coming week.
 Deliberately **not** wired into the automated Portfolio Review pipeline — this is a
