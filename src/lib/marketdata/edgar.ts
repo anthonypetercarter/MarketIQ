@@ -245,3 +245,55 @@ export async function fetchFrame(
   }
   return response.json();
 }
+
+/**
+ * One real company's real value for a Frame's fact, confirmed against a
+ * live response (see scripts/diagnose-frames-response.ts). `cik` is a
+ * plain number here — genuinely different from every other real CIK in
+ * this codebase, which is a zero-padded 10-digit string. Converting
+ * between the two is the caller's job, not something to paper over here.
+ * `start`/`end` are that specific company's own real fiscal period —
+ * companies with a non-calendar fiscal year (a real, common, legitimate
+ * case — Apple's own fiscal year ends in September) will show dates that
+ * don't align with the nominal calendar period requested. Not a defect,
+ * a real fact about how different companies actually report.
+ */
+export interface FrameEntry {
+  cik: number;
+  entityName: string;
+  start: string;
+  end: string;
+  val: number;
+}
+
+/**
+ * Pure function: extracts the real per-company array from a Frame
+ * response, skipping any entry missing a real cik, entityName, or
+ * numeric val rather than guessing at one.
+ */
+export function parseFrameEntries(raw: unknown): FrameEntry[] {
+  if (!raw || typeof raw !== "object" || !("data" in raw) || !Array.isArray(raw.data)) {
+    return [];
+  }
+
+  const entries: FrameEntry[] = [];
+  for (const item of raw.data as Record<string, unknown>[]) {
+    if (
+      typeof item?.cik !== "number" ||
+      typeof item?.entityName !== "string" ||
+      typeof item?.val !== "number" ||
+      typeof item?.start !== "string" ||
+      typeof item?.end !== "string"
+    ) {
+      continue;
+    }
+    entries.push({
+      cik: item.cik,
+      entityName: item.entityName,
+      start: item.start,
+      end: item.end,
+      val: item.val,
+    });
+  }
+  return entries;
+}

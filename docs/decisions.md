@@ -1080,6 +1080,100 @@ exists to prevent, not a hypothetical one.
 
 ---
 
+## 14. Quality screen — the first real, market-wide factor signal
+
+**Status:** Accepted — pure logic verified against realistic synthetic data. The live
+Frame fetches are unverified in this sandbox for the same reason as every other external
+integration (`data.sec.gov` isn't reachable here) and need confirmation via `npm run
+research:screen-quality` in a real environment.
+
+**Context**
+
+The founder asked directly what a real, institutional-caliber firm actually screens for.
+Real factor investing uses several distinct signals — Quality, Value, Growth, Momentum,
+Balance Sheet strength, insider activity, institutional ownership shifts — and this
+decision builds the first one, deliberately alone rather than all at once. The founder
+pushed back on starting narrow and asked why not build every signal now; the real answer
+given and accepted: the same XBRL tag-inconsistency bug already found once would recur for
+every new fact, SEC's real rate limit gets more fragile the more Frame calls a single run
+needs, nothing yet validates whether _any_ factor actually correlates with a good outcome
+(the reason Track Record exists), and combining several factors into one score is a real
+investment-philosophy decision that six simultaneous builds would force through rushed
+rather than deliberately. The reusable Frames-fetching layer is generic from day one, so a
+second factor is cheap to add later — only the first factor is wired into real output now.
+
+**A hard, structural boundary, not a soft scoping choice: equities only**
+
+XBRL fundamentals describe an operating company's real financial statements. Funds file
+genuinely different real SEC forms (N-PORT, N-CEN) and don't have a "net income margin" —
+they have a portfolio of underlying holdings. This isn't a gap to close later; it's a fact
+about what the data actually is. Evaluating a fund properly needs a different real
+toolkit — expense ratio, tracking error, and for a bond fund specifically, real duration
+and credit-quality distribution — named here as a genuine, separate, unaddressed future
+scope, not something this screen quietly extends to cover.
+
+**Confirm the real shape before parsing it — the discipline this project committed to
+after the earnings-calendar mistake, applied here from the start**
+
+Rather than write parsing logic against an assumed structure, `scripts/diagnose-frames-
+response.ts` fetched one real Frame first and printed its actual shape. This surfaced
+three real, honest facts worth designing around rather than discovering as bugs later:
+
+- **CIK format mismatch.** A Frame's `cik` is a plain number; every other real CIK in this
+  codebase (`Company.cik`, `lookupCik()`) is a zero-padded 10-digit string. Documented
+  directly on `FrameEntry` so a future caller can't miss it.
+- **Fiscal years genuinely don't align across companies.** A real "CY2024" Frame entry can
+  span, say, June 2024 to May 2025 for a company with a non-calendar fiscal year — not a
+  data quality issue, a real, legitimate fact about how that company actually reports.
+- **A real, noisy long tail.** One Frame alone returned 6,031 real companies, ranging from
+  genuine blue chips down to companies with real net losses in the hundreds of thousands
+  of dollars — real noise a screen has to filter, not an edge case to ignore.
+
+**Two real decisions, reasoned through rather than picked arbitrarily, per the founder's
+explicit ask for "good solid data, a scalable process, and legit, dependable insights"**
+
+- **A $1B trailing-revenue floor**, applied as free, local filtering _after_ the real
+  fetch (not a fetch-time parameter) — keeps results in the same weight class as what's
+  already seriously considered (AAPL, JNJ, UNH, CVS) and cleanly excludes the real noise
+  Frames data contains.
+- **Fiscal-year misalignment is disclosed, not corrected.** A company's own real margin
+  trend — the actual signal this screen measures — is unaffected by when its fiscal year
+  lands; that comparison is always the company against itself. Forcing every company onto
+  a strict calendar quarter would penalize genuinely good, legitimate businesses for an
+  irrelevant reason — Apple's own real fiscal year ends in September, not December.
+
+**One further, real, disclosed limitation, not silently absorbed:** this first version
+uses only the primary `Revenues` tag, not the full tag-fallback list already built for
+per-company lookups. A real company reporting revenue under the alternate tag
+(`RevenueFromContractWithCustomerExcludingAssessedTax`) will be missing from this specific
+screen's results, not misrepresented — an honest gap, named directly in the script and
+here, not a silent one.
+
+**Architecture:** `edgar.ts` gained `parseFrameEntries` — a defensive pure parser matching
+the real, confirmed shape, skipping any entry missing a real `cik`, `entityName`, or
+numeric `val`. `src/lib/research/qualityScreen.ts`'s `computeQualityScreen` is a pure
+function: joins four real Frame datasets (current/prior revenue, current/prior net
+income) by CIK, requires a company to have complete real data in all four or skips it
+entirely (never a partial or guessed-at result), applies the real revenue floor, and
+returns results sorted by the most genuinely improving margin first.
+`scripts/screen-quality.ts` (`npm run research:screen-quality`) is the real orchestration —
+four real Frame fetches with real, polite pacing between requests, then the pure join —
+and, like the earnings calendar before it, is a standalone research tool, not wired into
+automated Portfolio Review.
+
+**Verified:** synthetic tests using data shaped exactly like the real, confirmed Frame
+response — a genuine margin improvement and a genuine margin decline both computed
+correctly (including a real company, modeled on Apple's own actual year-over-year figures,
+whose margin genuinely declined slightly — confirming the logic doesn't just find
+improvement where it's expected to), the $1B floor correctly excluding a real sub-floor
+company entirely rather than just flagging it, correct descending sort by margin
+improvement, and a company missing from one of the four real datasets correctly skipped
+entirely rather than given a partial or fabricated result. The live, four-Frame fetch
+itself is unverified in this sandbox for the same reason as every other external
+integration here.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

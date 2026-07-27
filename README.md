@@ -269,6 +269,49 @@ EDGAR-plus-news process already used for every real Opportunity), not something 
 automatically. An earnings date on its own isn't evidence of anything; it's a signal of
 where to actually look next.
 
+### Quality Screen — the First Real, Market-Wide Factor Signal
+
+`docs/decisions.md` #14. Real institutional factor investing screens for several distinct
+signals (Quality, Value, Growth, Momentum, Balance Sheet strength, insider activity) — this
+builds the first one deliberately alone, not all at once. The reusable Frames-fetching
+layer is generic from day one, so a second factor is cheap to add; only Quality is wired
+into real output for now, after weighing the real cost of building several at once (the
+same tag-inconsistency bug recurring per new fact, SEC's real rate limit getting more
+fragile with more calls per run, nothing yet validating whether _any_ factor correlates
+with a good real outcome, and factor-combination being a real investment decision six
+simultaneous builds would force through rushed).
+
+**A hard, structural boundary: equities only.** Funds file genuinely different real SEC
+forms and don't have a net income margin — evaluating one needs a different real toolkit
+entirely (expense ratio, duration, credit quality), named as a separate, unaddressed
+future scope, not something this screen extends to cover.
+
+Built on `edgar.ts`'s `fetchFrame`/`parseFrameEntries` — SEC's real Frames API returns one
+fact (e.g., `NetIncomeLoss`) across every reporting company at once. Confirmed the real
+response shape via a live diagnostic (`npm run data:diagnose-frames`) before writing any
+parsing logic, the same discipline this project committed to after the earnings-calendar
+mistake. That confirmation surfaced three real, honest facts worth knowing: Frame data
+uses a plain-number CIK (every other real CIK here is a zero-padded string), fiscal years
+genuinely don't align across companies (a real, legitimate fact, not a data quality
+issue), and one real Frame alone returns 6,000+ companies including genuine noise.
+
+`src/lib/research/qualityScreen.ts`'s `computeQualityScreen` is a pure function joining
+real revenue and net income across two real periods by CIK, requiring complete data in all
+four datasets or skipping a company entirely (never a partial or guessed-at result). Two
+real decisions, reasoned through rather than defaulted to: a **$1B trailing-revenue
+floor**, applied as free local filtering after the fetch, to keep results in the same
+weight class as what's already seriously held; and fiscal-year misalignment **disclosed,
+not corrected** — a company's own real margin trend is unaffected by when its fiscal year
+lands, and forcing calendar alignment would penalize genuinely good businesses (Apple's
+own real fiscal year ends in September) for an irrelevant reason. One further real,
+disclosed gap: only the primary `Revenues` tag is used for now, not the full fallback list
+already built for per-company lookups — a company using the alternate tag is missing from
+results, not misrepresented.
+
+Run `npm run research:screen-quality` for a real, current shortlist of companies with
+genuinely improving margins. Standalone research tool, same as the earnings calendar —
+seeds real, deliberate research, not acted on automatically.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

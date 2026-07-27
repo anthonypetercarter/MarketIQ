@@ -22,6 +22,7 @@
     "data:verify-fred": "tsx scripts/verify-fred.ts",
     "data:verify-edgar": "tsx scripts/verify-edgar.ts",
     "data:diagnose-frames": "tsx scripts/diagnose-frames-response.ts",
+    "research:screen-quality": "tsx scripts/screen-quality.ts",
     "data:upcoming-earnings": "tsx scripts/upcoming-earnings.ts",
     "council:generate-review": "tsx scripts/generate-portfolio-review.ts",
     "council:track-record": "tsx scripts/evaluate-track-record.ts",
