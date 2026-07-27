@@ -322,6 +322,32 @@ Run `npm run research:screen-quality` for a real, current shortlist of companies
 genuinely profitable today and getting more so. Standalone research tool, same as the
 earnings calendar — seeds real, deliberate research, not acted on automatically.
 
+### Growth Screen — the Second Real Factor Signal
+
+`docs/decisions.md` #15. The second of the real factors named when this screening effort
+was scoped: real revenue growth acceleration, not just "revenue went up." Built second,
+deliberately, per decision #14's own sequencing reasoning — and the real payoff shows up
+immediately: the entire generic Frames-fetching layer needed zero new code, only the real,
+factor-specific join-and-filter logic (`src/lib/research/growthScreen.ts`) is new. Same
+equities-only boundary as Quality, for the same real reason.
+
+**One real lesson from Quality applied proactively here, not discovered the hard way
+twice.** Quality's own first live run found that ranking purely by improvement rewarded a
+company still deeply unprofitable, just less so than before. The identical failure shape
+exists for growth — a company shrinking 50% one year and only 10% the next shows a large
+raw "acceleration" while still genuinely shrinking. `computeGrowthScreen` requires the
+most recent real growth rate to be genuinely positive from the start, rather than waiting
+for a live run to surface the same bug a second time. Same $1B revenue floor and
+fiscal-year-misalignment-disclosed-not-corrected decisions carried over from Quality, for
+the same real reasoning.
+
+Needs three consecutive real periods, not two — acceleration requires two real growth
+rates to compare — but genuinely costs one fewer real Frame call than Quality (three
+Revenue fetches, no NetIncomeLoss at all), a concrete example of how a purely
+revenue-based factor is cheaper than one needing two real facts. Run `npm run
+research:screen-growth` for a real, current shortlist of companies with genuinely
+accelerating, currently-positive growth.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

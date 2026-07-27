@@ -1221,6 +1221,64 @@ real, current ~9-12% margin) are both correctly kept.
 
 ---
 
+## 15. Growth screen — the second real factor signal, one lesson already applied
+
+**Status:** Accepted — pure logic verified against realistic synthetic data. The live
+Frame fetches are unverified in this sandbox for the same reason as every other external
+integration here (`data.sec.gov` isn't reachable) and need confirmation via `npm run
+research:screen-growth`.
+
+**Context**
+
+The second of the real factors named when this screening effort was originally scoped:
+real revenue growth acceleration, not just "revenue went up" — a genuinely increasing
+growth rate is a stronger real signal than a flat one. Built second, deliberately, per
+decision #14's own reasoning for building one factor at a time rather than all six at
+once — and the real payoff of that sequencing shows up immediately here: the entire
+generic Frames-fetching layer (`fetchFrame`, `parseFrameEntries`) needed zero new code.
+Only the real, factor-specific join-and-filter logic is new.
+
+**Same asset-class boundary as Quality, for the identical real reason.** Equities only —
+funds file genuinely different real SEC forms and don't report revenue the way an
+operating company does.
+
+**The real lesson from Quality's first live run, applied proactively this time instead
+of discovered the hard way twice**
+
+Quality's live run surfaced a real bug only after seeing real output: ranking purely by
+improvement rewarded a company that was still deeply unprofitable, just less so than
+before. The identical failure shape exists here — a company shrinking 50% one year and
+only 10% the next shows a real, large "acceleration" by raw arithmetic, while still
+genuinely shrinking. Rather than wait for a live run to surface this a second time,
+`computeGrowthScreen` requires the most recent real growth rate to be genuinely positive
+from the start — the same real discipline Quality only reached after a live mistake,
+applied here in advance.
+
+**The two other real decisions carried over from Quality, for the same reasoning:** the
+same $1B trailing-revenue floor, and fiscal-year misalignment disclosed rather than
+corrected — a company's own real growth trend is unaffected by when its fiscal year
+lands. Same disclosed tag-coverage limitation too: only the primary `Revenues` tag is
+used, not the full fallback list built for per-company lookups.
+
+**Architecture:** `src/lib/research/growthScreen.ts`'s `computeGrowthScreen` joins three
+real Revenue Frame datasets (three consecutive real periods, not two — acceleration needs
+two real growth rates to compare) by CIK, requires a company to have complete real data in
+all three or skips it entirely, computes two real, consecutive growth rates, applies the
+real revenue floor and the real positive-current-growth requirement, and returns results
+sorted by the most genuinely accelerating growth first. `scripts/screen-growth.ts` (`npm
+run research:screen-growth`) is the real orchestration — three real Frame fetches with the
+same real, polite pacing as Quality — genuinely one fewer real call than Quality needed
+(three Revenue fetches, no NetIncomeLoss at all), a real, concrete example of how a purely
+Revenue-based factor is cheaper than one needing two real facts.
+
+**Verified:** four synthetic tests — a company still genuinely shrinking today correctly
+excluded despite a large raw "deceleration" (the proactive fix's core case), a genuinely
+accelerating, currently-growing company correctly kept, a real sub-$1B company correctly
+excluded by the floor even with strong growth, and a company missing from one of the three
+real periods correctly skipped entirely rather than given a partial result.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is
