@@ -80,12 +80,18 @@ export interface HoldingSizing {
  * Returns null if the position isn't actually over the ceiling (a REDUCE
  * verdict without a real breach shouldn't produce a trade).
  */
-export function computeReduceToConcentrationCeiling(
+/**
+ * Real, general trim-to-a-ceiling math, parameterized by the actual
+ * ceiling percent rather than deriving one from assetType — shared by
+ * both the normal concentration-ceiling path and the risk-escalated path
+ * below, so the two can't silently compute a real trim differently.
+ */
+function computeReduceToCeilingPercent(
   holding: HoldingWithCompany,
   totalPortfolioValue: number,
+  ceilingPercent: number,
 ): HoldingSizing | null {
   const currentValue = marketValue(holding);
-  const ceilingPercent = getConcentrationCeilingPercent(holding.company.assetType);
   const ceilingValue = (ceilingPercent / 100) * totalPortfolioValue;
   if (currentValue <= ceilingValue) return null;
 
@@ -95,6 +101,64 @@ export function computeReduceToConcentrationCeiling(
     holding.quantity,
   );
   return { sharesToSell, estimatedProceeds: sharesToSell * holding.company.currentPrice };
+}
+
+export function computeReduceToConcentrationCeiling(
+  holding: HoldingWithCompany,
+  totalPortfolioValue: number,
+): HoldingSizing | null {
+  const ceilingPercent = getConcentrationCeilingPercent(holding.company.assetType);
+  return computeReduceToCeilingPercent(holding, totalPortfolioValue, ceilingPercent);
+}
+
+/**
+ * Real escalation schedule (decision #19) for a REDUCE the Council issued
+ * for company/sector-specific risk — genuinely distinct from being over a
+ * concentration ceiling or from category rebalancing, and until now had
+ * no sizing mechanism at all. Deliberately not a single, fixed real
+ * number: a persistent, real, multi-day risk signal is treated as
+ * stronger evidence than a single day's flag, so tolerance tightens the
+ * longer the same real pattern repeats. `consecutiveFlaggedDays` counts
+ * real, PRIOR days this exact ticker showed a REDUCE with no mechanical
+ * trim (neither ceiling- nor category-driven) — 0 means today would be
+ * the first such day.
+ *
+ * Deliberately floors at 10%, never 0% — driving the effective ceiling
+ * to zero would quietly turn a REDUCE into a backdoor full exit, and
+ * EXIT already exists as its own real, deliberate verdict the Council
+ * can choose directly if that's genuinely warranted.
+ */
+export function computeRiskEscalatedCeilingPercent(
+  consecutiveFlaggedDays: number,
+  normalCeilingPercent: number,
+): number {
+  const multiplier =
+    consecutiveFlaggedDays === 0
+      ? 0.75
+      : consecutiveFlaggedDays === 1
+        ? 0.5
+        : consecutiveFlaggedDays === 2
+          ? 0.25
+          : 0.1;
+  return normalCeilingPercent * multiplier;
+}
+
+/**
+ * Sizes a real trim using the risk-escalated ceiling rather than the
+ * normal one — same real trim math as computeReduceToConcentrationCeiling,
+ * just against a real, tightened threshold rather than the standard one.
+ */
+export function computeRiskEscalatedReduce(
+  holding: HoldingWithCompany,
+  totalPortfolioValue: number,
+  consecutiveFlaggedDays: number,
+): HoldingSizing | null {
+  const normalCeilingPercent = getConcentrationCeilingPercent(holding.company.assetType);
+  const escalatedCeilingPercent = computeRiskEscalatedCeilingPercent(
+    consecutiveFlaggedDays,
+    normalCeilingPercent,
+  );
+  return computeReduceToCeilingPercent(holding, totalPortfolioValue, escalatedCeilingPercent);
 }
 
 /**

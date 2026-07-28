@@ -29,8 +29,10 @@ import {
   computeReduceToConcentrationCeiling,
   computeCategoryOverweightValue,
   sizeCategoryRebalanceReduces,
+  computeRiskEscalatedReduce,
   computeExitSizing,
 } from "../src/lib/portfolio/playbook";
+import { countConsecutiveRiskFlaggedDays } from "../src/lib/council/riskEscalation";
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
 import { callCouncilForPortfolioReview } from "../src/lib/council/generatePortfolioReview";
 import { validatePortfolioReview } from "../src/lib/council/validatePortfolioReview";
@@ -233,6 +235,21 @@ async function main() {
     }
   }
 
+  // Real, past reviews for this portfolio — used only for risk-escalation
+  // (decision #19): how many consecutive real prior days did a ticker
+  // show a REDUCE with no mechanical trim (the honest fallback this
+  // section used to always leave in place). Ordered most-recent-first,
+  // explicitly excluding today's date in case this script is ever
+  // re-run for the same real day.
+  const pastReviews = await prisma.portfolioReview.findMany({
+    where: { portfolioId: portfolio.id, date: { lt: brief.date } },
+    orderBy: { date: "desc" },
+    take: 10,
+  });
+  const pastReviewVerdicts: StoredPortfolioReviewVerdicts[] = pastReviews.map(
+    (r) => r.verdicts as unknown as StoredPortfolioReviewVerdicts,
+  );
+
   const reduceTradeByTicker = new Map<
     string,
     { sharesToSell: number; estimatedProceeds: number }
@@ -247,12 +264,23 @@ async function main() {
     // Either real, independent justification supports at least that much
     // of a trim — take whichever is larger rather than picking one
     // arbitrarily over the other.
-    const trade =
+    let trade =
       concentrationTrade && categoryTrade
         ? concentrationTrade.estimatedProceeds >= categoryTrade.estimatedProceeds
           ? concentrationTrade
           : categoryTrade
         : (concentrationTrade ?? categoryTrade);
+
+    // Neither real mechanism explained this REDUCE — the real, honest
+    // signature of a company/sector-specific risk call, which had no
+    // sizing mechanism at all until decision #19. A persistent, real,
+    // multi-day pattern is treated as stronger evidence than a single
+    // day's flag, so the effective ceiling tightens the longer this
+    // exact ticker keeps showing up this way.
+    if (!trade && holding) {
+      const consecutiveFlaggedDays = countConsecutiveRiskFlaggedDays(v.ticker, pastReviewVerdicts);
+      trade = computeRiskEscalatedReduce(holding, totalPortfolioValue, consecutiveFlaggedDays);
+    }
 
     if (trade) reduceTradeByTicker.set(v.ticker, trade);
   }

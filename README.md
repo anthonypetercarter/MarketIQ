@@ -433,6 +433,44 @@ real functions the script now calls in sequence — confirmed the fix takes a re
 candidate from zero shares to 97 real shares (~$3,351), funded entirely by a real,
 category-driven REDUCE's own computed proceeds.
 
+### A Real, Escalating Ceiling for Company/Sector-Specific-Risk REDUCEs
+
+`docs/decisions.md` #19. A real, live run surfaced a genuine third category of REDUCE
+with no sizing mechanism at all: the Council trimmed ASML for a real, severe chip-sector
+correction — neither over its own ceiling (only 3.3% of the portfolio) nor part of an
+overweight category (International Equities was genuinely underweight). The REDUCE was
+real and well-evidenced; the deterministic layer had no tool for company or sector-
+specific risk, correctly falling back to the honest "no mechanical trim" message.
+
+A fixed flat-percent trim was rejected outright — it wouldn't respond to how severe a
+specific risk actually is. Instead: a real, escalating ceiling keyed off genuine,
+persistent history. `countConsecutiveRiskFlaggedDays` looks back through real, stored
+Portfolio Review history and counts how many consecutive prior days a ticker showed a
+REDUCE with no mechanical trim — the precise signature of this scenario.
+`computeRiskEscalatedCeilingPercent` turns that into a real ceiling multiplier: 75% of
+normal on day one, 50% on day two, 25% on day three, floored at 10% from day four onward
+— deliberately never 0%, since that would quietly turn a REDUCE into a backdoor EXIT. Any
+day that breaks the pattern (a HOLD, a real mechanically-sized trim, or no verdict at
+all) resets the streak to zero and the ceiling back to normal.
+
+One real, honest limitation: this doesn't guarantee an immediate fix for an already-small,
+newly-flagged position — ASML's real 3.3% wouldn't clear even day one's tightened 6%
+ceiling. The mechanism responds to _persistent_ real risk by design, not necessarily the
+first day it appears.
+
+`computeReduceToConcentrationCeiling` was refactored into a thin wrapper around a new,
+general `computeReduceToCeilingPercent`, shared with the new risk-escalated path so the
+two can never silently diverge. The risk-escalated path only engages when neither the
+concentration nor category mechanism produced a trade — a real fallback of last resort.
+
+**Verified:** the escalation formula, the refactor's exact backward compatibility, and
+the streak-counting logic against four real scenarios (a genuine multi-day streak, a
+reset on no action, a reset on a real mechanically-sized trim, and no cross-ticker
+leakage). A full, real, end-to-end pass against actual Postgres — seeding real,
+consecutive risk-flagged rows, running the real query pattern, and feeding the result
+through the escalated sizing function — confirmed the whole chain, including a correct
+exact-boundary case and a position genuinely over that boundary producing a real trim.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

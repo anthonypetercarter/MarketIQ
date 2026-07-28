@@ -1513,6 +1513,79 @@ the same order of magnitude as the real, repeated failure this decision exists t
 
 ---
 
+## 19. A real, escalating ceiling for company/sector-specific-risk REDUCEs
+
+**Status:** Accepted — pure logic and the real historical query pattern both verified.
+
+**Context**
+
+A real, live run surfaced a genuine third category of REDUCE this project had never built
+sizing for. The Council trimmed ASML for a real, severe chip-sector correction — evidence
+that's neither "this position is over its own ceiling" (ASML was only 3.3% of the
+portfolio) nor "this category is overweight" (International Equities was genuinely
+_underweight_, so decision #16's mechanism correctly declined to engage). The REDUCE was
+real and well-evidenced; the deterministic layer simply had no tool for company or
+sector-specific risk at all, and fell back to the honest "no mechanical trim" message —
+correct behavior for a case that hadn't been designed for yet, not a bug.
+
+**Two real options were weighed directly with the founder, and the harder, more honest one
+was chosen.** A fixed rule (trim every risk-driven REDUCE by some flat percent) was
+rejected outright — that number wouldn't respond to how severe a specific, real risk
+actually is, the same kind of manufactured precision this project has avoided everywhere
+else. The alternative — no mechanical sizing at all, just a more informative fallback
+message — was the honest baseline, but the founder specifically wanted the system to
+actually tighten its own real tolerance the longer a real risk persists, and to loosen
+back up the moment it doesn't. That's the version built.
+
+**The mechanism:** a real, escalating ceiling, keyed off genuine, persistent history
+rather than a single day's judgment. `countConsecutiveRiskFlaggedDays`
+(`src/lib/council/riskEscalation.ts`) looks back through real, already-stored Portfolio
+Review history and counts how many consecutive prior real days a specific ticker showed a
+REDUCE with no mechanical trim computed — the precise, real signature of this exact
+scenario. `computeRiskEscalatedCeilingPercent` (`src/lib/portfolio/playbook.ts`) turns
+that real count into a real ceiling multiplier: 75% of normal on day one, 50% on day two,
+25% on day three, floored at 10% for day four onward. Deliberately never reaches 0% — a
+REDUCE driven to a zero-percent ceiling would quietly become a backdoor full exit, and
+EXIT already exists as its own real, deliberate verdict the Council can choose directly
+when that's genuinely warranted. The moment a day's real verdict isn't this exact
+pattern — a HOLD, a REDUCE that _did_ get a real mechanical trim via one of the other two
+mechanisms, or no verdict for the ticker at all — the streak resets to zero and the
+ceiling returns to normal, exactly the "if it holds, it holds; if it's still flagged, drop
+it again" behavior the founder asked for.
+
+**Real, honest limitation, disclosed rather than glossed over:** this doesn't guarantee an
+immediate fix for an already-small, newly-flagged position. ASML's real 3.3% wouldn't
+clear even day one's tightened ceiling (6% for an equity) — the mechanism is built to
+respond to _persistent_ real risk, not necessarily catch it the very first day it's
+flagged. That's a deliberate trade-off, not an oversight: reacting hard to a single day's
+flag would reintroduce the same "manufactured precision on day one" problem the flat-rule
+option was rejected for.
+
+**Architecture:** `computeReduceToConcentrationCeiling` was refactored into a thin
+wrapper around a new, general `computeReduceToCeilingPercent`, parameterized by ceiling
+percent rather than deriving one from `assetType` — shared by both the normal path and
+the new `computeRiskEscalatedReduce`, so the two can never silently compute a real trim
+differently. In `generate-portfolio-review.ts`, real past `PortfolioReview` rows are
+fetched (ordered most-recent-first, explicitly excluding today's date) only when neither
+the concentration nor category mechanism produced a trade — the risk-escalated path is a
+real fallback of last resort, not consulted otherwise.
+
+**Verified:** the escalation formula confirmed correct at every real step (75/50/25/10,
+with the floor holding even 9 real days into a streak). The refactor confirmed to
+preserve `computeReduceToConcentrationCeiling`'s exact prior behavior. The streak-counting
+logic verified against four real scenarios: a genuine multi-day streak counted correctly,
+a day with no action for the ticker resetting it to zero, a REDUCE that _did_ get a real
+mechanical trim correctly breaking the streak (a different real mechanism, not risk-
+driven), and one ticker's pattern confirmed not to leak into another's. A full, real,
+end-to-end pass against actual Postgres — seeding two real, consecutive risk-flagged
+review rows, running the exact query pattern the script uses, counting the real streak,
+and feeding it into the escalated sizing function — confirmed the whole chain works
+correctly, including a real, exact-boundary case (a position landing precisely on the
+escalated ceiling, correctly producing no trade) and a position genuinely over that same
+boundary correctly producing a real trim.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is
