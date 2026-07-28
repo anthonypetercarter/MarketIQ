@@ -1658,6 +1658,30 @@ uses, and feeding the result through the real packet-assembly function — confi
 whole chain works correctly, including the real 46-point gap between them reaching the
 packet intact, well clear of the real 10-point margin this decision is built around.
 
+**Addendum — a real, genuine gap: the feature shipped invisible**
+
+The first real live run after this decision shipped produced no visible way to confirm
+whether the Council actually scored anything at all. Real cause: `conviction` was built
+all the way through the schema, validation, and storage layers, but neither the terminal
+script's console output nor the actual Portfolio page UI was ever updated to display it —
+a real oversight, not a logic defect. The data may well have been stored correctly from
+the very first run; there was simply no way for anyone, including the person who built
+it, to see it.
+
+**Fixed in both places it actually matters.** `scripts/generate-portfolio-review.ts`'s
+console output now prints each holding's real conviction score (or an honest "no
+conviction score" when it's genuinely absent) alongside its verdict.
+`PortfolioReviewPanel.tsx` — the real surface a person actually looks at day to day, more
+important than the terminal — now shows each holding's real conviction next to its
+verdict badge, rendering nothing at all when the value is genuinely undefined rather than
+displaying a literal "undefined."
+
+**Verified:** a real render test using `react-dom/server`, confirming a holding with a
+real conviction score (72) renders it visibly, and a holding with a genuinely undefined
+score never renders the literal string "undefined" — the same "degrade honestly, never
+fabricate or leak an internal placeholder" discipline as every other real fact in this
+project.
+
 ---
 
 # North Star Vision

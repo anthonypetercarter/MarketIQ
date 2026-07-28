@@ -129,7 +129,14 @@ export function PortfolioReviewPanel({
                   {holding.ticker}{" "}
                   <span className="text-ink-500 font-normal">({holding.companyName})</span>
                 </div>
-                <div className="text-ink-900 text-[13px]">{VERDICT_LABEL[holding.verdict]}</div>
+                <div className="flex items-baseline gap-2">
+                  {holding.conviction !== undefined && (
+                    <span className="text-ink-500 text-[12px]">
+                      Conviction: {holding.conviction}
+                    </span>
+                  )}
+                  <span className="text-ink-900 text-[13px]">{VERDICT_LABEL[holding.verdict]}</span>
+                </div>
               </div>
               <EvidenceList evidence={holding.evidence} />
             </div>

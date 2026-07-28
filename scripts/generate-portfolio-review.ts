@@ -419,8 +419,10 @@ async function main() {
 
   console.log("\nExisting Holdings:");
   for (const v of result.verdicts) {
+    const convictionText =
+      v.conviction !== undefined ? ` (conviction: ${v.conviction})` : " (no conviction score)";
     console.log(
-      `  ${v.ticker} (${v.companyName}): ${v.verdict}${v.validated ? "" : " [safe default]"}`,
+      `  ${v.ticker} (${v.companyName}): ${v.verdict}${convictionText}${v.validated ? "" : " [safe default]"}`,
     );
     for (const e of v.evidence) console.log(`    - ${e}`);
   }
