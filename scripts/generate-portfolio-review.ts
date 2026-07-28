@@ -136,10 +136,38 @@ async function main() {
     `Real fundamentals found for ${foundCount}/${uniqueCompaniesByTicker.size} compan${uniqueCompaniesByTicker.size === 1 ? "y" : "ies"}.`,
   );
 
+  // Real, past reviews for this portfolio, fetched once and reused for two
+  // real purposes: seeding each holding's priorConviction in today's packet
+  // (decision #20) and, later below, risk-escalation's consecutive-day
+  // streak (decision #19). Ordered most-recent-first, explicitly excluding
+  // today's date in case this script is ever re-run for the same real day.
+  const pastReviews = await prisma.portfolioReview.findMany({
+    where: { portfolioId: portfolio.id, date: { lt: brief.date } },
+    orderBy: { date: "desc" },
+    take: 10,
+  });
+  const pastReviewVerdicts: StoredPortfolioReviewVerdicts[] = pastReviews.map(
+    (r) => r.verdicts as unknown as StoredPortfolioReviewVerdicts,
+  );
+
+  // Each holding's real conviction score from the single most recent past
+  // review only — not searched further back, since older data would be a
+  // staler real signal for what should be today's comparison. Missing
+  // entirely (day one, or a validation-degraded prior verdict) means
+  // undefined, never fabricated.
+  const priorConvictionByTicker = new Map<string, number | undefined>();
+  const mostRecentPastReview = pastReviewVerdicts[0];
+  if (mostRecentPastReview) {
+    for (const h of mostRecentPastReview.existingHoldings) {
+      if (h.conviction !== undefined) priorConvictionByTicker.set(h.ticker, h.conviction);
+    }
+  }
+
   const packet = assembleResearchPacket({
     holdings: holdingsForCalc,
     cashBalance,
     fundamentalsByTicker,
+    priorConvictionByTicker,
     brief: {
       date: brief.date,
       councilRecommendation: brief.councilRecommendation,
@@ -235,21 +263,8 @@ async function main() {
     }
   }
 
-  // Real, past reviews for this portfolio — used only for risk-escalation
-  // (decision #19): how many consecutive real prior days did a ticker
-  // show a REDUCE with no mechanical trim (the honest fallback this
-  // section used to always leave in place). Ordered most-recent-first,
-  // explicitly excluding today's date in case this script is ever
-  // re-run for the same real day.
-  const pastReviews = await prisma.portfolioReview.findMany({
-    where: { portfolioId: portfolio.id, date: { lt: brief.date } },
-    orderBy: { date: "desc" },
-    take: 10,
-  });
-  const pastReviewVerdicts: StoredPortfolioReviewVerdicts[] = pastReviews.map(
-    (r) => r.verdicts as unknown as StoredPortfolioReviewVerdicts,
-  );
-
+  // Risk-escalation (decision #19) using the real, past review history
+  // already fetched above, before packet assembly.
   const reduceTradeByTicker = new Map<
     string,
     { sharesToSell: number; estimatedProceeds: number }

@@ -471,6 +471,42 @@ consecutive risk-flagged rows, running the real query pattern, and feeding the r
 through the escalated sizing function — confirmed the whole chain, including a correct
 exact-boundary case and a position genuinely over that boundary producing a real trim.
 
+### Real, Relative Conviction — a Genuine Swap Signal, Not a Forecast
+
+`docs/decisions.md` #20. Five consecutive live runs showed the same pattern: a
+well-evidenced BUY kept landing on "approved, but no room," while the real allocation
+imbalance behind it never moved, because the Council never found an existing holding
+individually weak enough to trim. Every prior fix was working correctly — there was
+simply nothing weak enough to act on. The founder asked how a real institution handles
+this and named it precisely: a real "relative value" swap — trim the weakest current
+conviction to fund the strongest new one, if the gap is genuinely meaningful. Distinct
+from profit-forecasting (already rejected elsewhere in this project): this compares real,
+present-day conviction, not predicted future performance.
+
+The real, structural gap: a new candidate always had a real conviction score, set once at
+research time; an existing holding never had a comparable number, only qualitative
+language. The fix: the Council now scores every existing holding's own real, current
+conviction (0-100) fresh, every day. The real chicken-and-egg problem — today's packet is
+built before today's score can exist — is resolved by using _yesterday's_ real, stored
+score instead, reusing the exact same historical-lookback pattern decision #19 built,
+rather than duplicating it.
+
+The margin is a real, deliberate policy choice: initially proposed at 15 points, the
+founder found that too heavy and asked to start at 10 — the same "pick a defensible
+number, be ready to revisit it" discipline as the $1B revenue floor or the risk-escalation
+schedule. Framed as a real reason to _weigh_ a swap seriously, not a mechanical trigger —
+a holding with a genuinely strong conviction shouldn't be trimmed just because a new
+candidate exists.
+
+**Verified:** the defensive conviction parser correctly handles a valid score, an
+out-of-range value (degrading to `undefined`, never clamped), and a missing value
+(degrading gracefully without invalidating the verdict). The packet correctly carries a
+real, pre-fetched `priorConviction` through, and degrades gracefully when omitted. A full,
+real, end-to-end pass against actual Postgres — two real holdings with genuinely
+different stored scores (42 and 88), the real query pattern, and the real packet-assembly
+function — confirmed the whole chain, including the real 46-point gap reaching the packet
+intact, well clear of the real 10-point margin.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

@@ -27,6 +27,8 @@ export interface HoldingVerdictResult {
   validated: boolean;
   /** The real price at the moment this verdict was issued — needed to evaluate whether it turned out well, once enough time has passed. */
   priceAtVerdict: number;
+  /** Real, present-day conviction (0-100) in continuing to hold this position, per decision #20 — undefined when the raw output omitted or invalidated it, never fabricated as a fallback score. */
+  conviction: number | undefined;
 }
 
 /** A validated BUY verdict on a candidate not currently held — carries what deterministic sizing needs. */
@@ -52,6 +54,7 @@ interface RawVerdictEntry {
   ticker?: unknown;
   companyName?: unknown;
   verdict?: unknown;
+  conviction?: unknown;
   evidence?: unknown;
 }
 
@@ -79,7 +82,21 @@ function safeHold(
     ],
     validated: false,
     priceAtVerdict,
+    conviction: undefined,
   };
+}
+
+/**
+ * Defensive parse for the real, optional conviction field (decision #20)
+ * — a missing or out-of-range value degrades to undefined, never a
+ * fabricated fallback score. A holding without a real conviction today
+ * simply isn't included when comparing weakest-conviction holdings
+ * across a category; it's not treated as though it scored a 0 or a 50.
+ */
+function parseConviction(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  if (value < 0 || value > 100) return undefined;
+  return value;
 }
 
 const NARRATIVE_FALLBACK =
@@ -259,6 +276,7 @@ export function validatePortfolioReview(
       evidence,
       validated: true,
       priceAtVerdict: holding.currentPrice,
+      conviction: parseConviction(raw.conviction),
     };
   });
 

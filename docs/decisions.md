@@ -1586,6 +1586,80 @@ boundary correctly producing a real trim.
 
 ---
 
+## 20. Real, relative conviction — a genuine swap signal, not a forecast
+
+**Status:** Accepted — the schema change, validation, packet-carrying logic, and the full
+real query/construction chain all verified. The Council's actual, live scoring behavior
+is unverified until the next real run, same as every prompt-level decision before it.
+
+**Context**
+
+A real, repeated pattern, now five consecutive live runs deep: a well-evidenced BUY
+(AstraZeneca three times, Lincoln National twice) kept landing on "approved, but no room,"
+while the real allocation imbalance behind it (US Equities at 73% vs. a 53% target, cash
+near zero) never moved — because the Council, every single time, concluded no existing
+holding's thesis was individually weak enough to justify a trim. Every prior fix (decisions
+#16, #18, #19) was working correctly; there was simply nothing weak enough to act on.
+
+The founder asked directly how a real institution handles this, and named it precisely: a
+real "relative value" or "swap" decision — trim the weakest current conviction to fund the
+strongest new one, if and only if the gap between them is genuinely meaningful. Distinct
+from the profit-forecasting idea already rejected earlier in this project: this doesn't
+predict which asset will perform better — it compares real, present-day conviction, the
+same kind of current-state judgment the Council already makes every day, just turned into
+a direct, head-to-head comparison it had never been asked to make before.
+
+**The real, structural gap this exposed:** a new candidate has always carried a real,
+numeric conviction score (LNC's 58, AZN's 62) — set once, by whoever researched it, when
+the Opportunity was created. An existing holding never had a comparable number; the
+Council only ever reasoned about it qualitatively ("thesis intact"). Without a real number
+on both sides, "is the new idea's conviction meaningfully higher" had no real yardstick.
+
+**The fix:** the Council now scores every existing holding's own real, present-day
+conviction (0-100), fresh, every single day — genuinely current judgment, not a forecast
+of future returns, the identical framing a candidate's own conviction already uses.
+
+**The real chicken-and-egg problem, and how it's resolved:** today's research packet is
+built _before_ the Council runs, so today's own conviction score for a holding can't
+possibly exist yet at packet-assembly time. The resolution: use _yesterday's_ real, stored
+score instead — the exact same historical-lookback pattern decision #19 already built,
+reused directly rather than duplicated. Only the single most recent past review is
+consulted, never further back; older data would be a staler real signal for what's
+supposed to be today's comparison. A holding with no real prior score (day one, or a
+validation-degraded prior verdict) correctly carries `undefined`, never a fabricated
+placeholder score.
+
+**The margin, a real, deliberate policy choice, not a derived number.** The founder found
+an initially-proposed 15-point threshold too heavy and asked to start at 10 instead — the
+same "pick a defensible number, and be ready to revisit it once real behavior is observed"
+discipline as the Quality screen's $1B floor or the risk-escalation schedule. Framed to
+the Council explicitly as a reason to _weigh_ a swap seriously, not a mechanical trigger
+to always execute one — a holding with a real, still-strong conviction should not be
+trimmed just because a new candidate exists, however appealing.
+
+**Architecture:** the AI's own tool schema gained an optional `conviction` field on
+existing-holding verdict entries only (candidates keep using their own, separately-set
+conviction, unchanged) — deliberately not required, so a missing or invalid value degrades
+to `undefined` rather than forcing artificial precision or failing the whole verdict.
+`ResearchPacketHolding` gained a `priorConviction` field, populated by the orchestrating
+script from the same real, already-fetched past-review data decision #19 uses — moved
+earlier in the script's execution order so it's available before packet assembly, not
+just after the Council runs. `assembleResearchPacket` stays pure, accepting the pre-fetched
+map as an optional parameter, same discipline as `fundamentalsByTicker` before it.
+
+**Verified:** the defensive conviction parser confirmed correct for a real, valid score, an
+out-of-range value (degrading to `undefined`, never clamped or guessed), and a missing
+value (degrading gracefully without invalidating an otherwise well-formed verdict). The
+packet confirmed to correctly carry a real, pre-fetched `priorConviction` through, and to
+degrade to `undefined` gracefully when the map is omitted entirely. A full, real,
+end-to-end pass against actual Postgres — seeding two real holdings with genuinely
+different stored conviction scores (42 and 88), running the exact query pattern the script
+uses, and feeding the result through the real packet-assembly function — confirmed the
+whole chain works correctly, including the real 46-point gap between them reaching the
+packet intact, well clear of the real 10-point margin this decision is built around.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

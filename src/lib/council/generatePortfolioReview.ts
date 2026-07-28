@@ -51,6 +51,16 @@ const PORTFOLIO_REVIEW_TOOL = {
               type: "string",
               enum: ["BUY", "INCREASE", "HOLD", "REDUCE", "EXIT"],
             },
+            conviction: {
+              type: "integer",
+              description:
+                "For an EXISTING HOLDING verdict only (not a new-candidate BUY, which already carries its " +
+                "own real conviction from the packet): your real, current conviction in continuing to " +
+                "hold this position AT ITS CURRENT SIZE, 0-100, the same scale a candidate's conviction " +
+                "uses. 0 means no real confidence left in holding it today; 100 means maximum confidence. " +
+                "A real, present-day judgment based on today's actual evidence — not a forecast of future " +
+                "returns. Required for every existing-holding verdict; omit for new-candidate BUY entries.",
+            },
             evidence: {
               type: "array",
               items: { type: "string" },
@@ -134,6 +144,17 @@ function buildSystemPrompt(): string {
       "being too large on its own; this is about a category being too heavy relative to another category " +
       "being genuinely light, which can be real even when every individual position is comfortably under " +
       "its own ceiling.",
+    "- Every existing-holding verdict needs a real `conviction` score, 0-100 — your genuine, current " +
+      "confidence in continuing to hold this position at its current size, based on today's actual " +
+      "evidence, not a forecast of future performance. This makes a real, direct comparison possible: when " +
+      "the packet's `allocationGaps` shows an overweight category and a real candidate's own conviction " +
+      "(from `candidates`) clears an existing holding's conviction in that same category by a real, " +
+      "meaningful margin — at least 10 points — that's real, genuine evidence a swap may be warranted: " +
+      "REDUCE the weaker-conviction holding specifically to help fund the stronger-conviction candidate. " +
+      "This is still your real, case-by-case judgment, not an automatic trigger — a 10-point gap is a " +
+      "reason to seriously weigh a swap, not a mechanical instruction to always execute one. A holding " +
+      "with a real, still-strong conviction should not be trimmed just because a new candidate exists, " +
+      "however appealing — the same discipline as every other REDUCE.",
   ].join("\n");
 }
 

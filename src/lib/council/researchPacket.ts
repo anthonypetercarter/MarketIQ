@@ -30,6 +30,8 @@ export interface ResearchPacketHolding {
   unrealizedGainPercent: number;
   /** Real, primary-source fundamentals from SEC EDGAR (decision #11) — null when unavailable (a fund, or a company EDGAR couldn't resolve), never fabricated. */
   fundamentals: KeyFundamentals | null;
+  /** This holding's real conviction score from the most recent PAST review (decision #20) — undefined when no prior real score exists (day one, or a validation-degraded prior verdict). Never fabricated; used to compare against a real candidate's own conviction within the same category. */
+  priorConviction: number | undefined;
 }
 
 export interface ResearchPacketRisk {
@@ -116,8 +118,17 @@ export function assembleResearchPacket(input: {
   allocationGaps: AllocationGap[];
   /** Pre-fetched, keyed by ticker — this function stays pure and never fetches EDGAR data itself. Missing entries treated as null (unavailable). */
   fundamentalsByTicker?: Map<string, KeyFundamentals | null>;
+  /** Each holding's real conviction score from the most recent PAST review (decision #20), keyed by ticker — pre-fetched by the caller, kept pure here. Missing entries treated as undefined (no real prior score), never fabricated. */
+  priorConvictionByTicker?: Map<string, number | undefined>;
 }): ResearchPacket {
-  const { holdings, cashBalance, brief, allocationGaps, fundamentalsByTicker } = input;
+  const {
+    holdings,
+    cashBalance,
+    brief,
+    allocationGaps,
+    fundamentalsByTicker,
+    priorConvictionByTicker,
+  } = input;
   const totalPortfolioValue = computeTotalPortfolioValue(holdings, cashBalance);
 
   const packetHoldings: ResearchPacketHolding[] = holdings.map((h) => {
@@ -137,6 +148,7 @@ export function assembleResearchPacket(input: {
       unrealizedGainPercent:
         h.costBasis > 0 ? ((h.company.currentPrice - h.costBasis) / h.costBasis) * 100 : 0,
       fundamentals: fundamentalsByTicker?.get(h.company.ticker) ?? null,
+      priorConviction: priorConvictionByTicker?.get(h.company.ticker) ?? undefined,
     };
   });
 
