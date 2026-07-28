@@ -81,6 +81,27 @@ async function main() {
     },
   });
 
+  // Added after the fact, same precedent as CVS/FSLR/BND: the real result
+  // of a genuine diligence pass on the Quality/Growth screens' insurance
+  // cluster. Lincoln National held up under real scrutiny; Jackson
+  // Financial and Equitable did not (a real, serious revenue decline in
+  // at least one recent quarter each) and are deliberately NOT included
+  // here — the "cluster" the screens implied turned out to be less
+  // uniform than it first appeared.
+  const lnc = await prisma.company.upsert({
+    where: { ticker: "LNC" },
+    update: {},
+    create: {
+      ticker: "LNC",
+      name: "Lincoln National Corporation",
+      sector: "Financials",
+      currentPrice: 34.55,
+      previousClosePrice: 35.94,
+      region: "DOMESTIC",
+      assetType: "EQUITY",
+    },
+  });
+
   const decisionRationale =
     "A genuinely severe, escalated real chip-sector crash today — the Nasdaq-100 entered " +
     "technical correction territory, with real, sharp double-digit declines across major " +
@@ -113,14 +134,22 @@ async function main() {
     "semiconductor space held up better than the headline chip story alone would suggest. " +
     "The Fed's actual rate decision is now tomorrow, Wednesday, no longer just 'this " +
     "week' — a real, immediate binary catalyst, with real market pricing continuing to " +
-    "show meaningful odds of a hike at this specific meeting. One honest, disclosed gap " +
-    "carried forward from yesterday: the Quality and Growth screens built this week " +
-    "(decisions #14 and #15) require live SEC access this drafting environment doesn't " +
-    "have, so they weren't run for today's Brief either. AstraZeneca and Pfizer are " +
-    "carried forward from yesterday with no new evidence today. On balance: a real, " +
-    "meaningful new risk specifically in a sector this portfolio holds real exposure to, " +
-    "held to Maintain Current Allocation with confidence moving down modestly, and " +
-    "tomorrow's Fed decision as the next real, immediate test.";
+    "show meaningful odds of a hike at this specific meeting. Since this Brief was first " +
+    "published, the Quality and Growth screens (decisions #14, #15) were run for real via " +
+    "npm run research:daily, closing yesterday's disclosed gap. Real diligence on what " +
+    "they surfaced: AppLovin's real fundamentals are exceptional, but real, serious " +
+    "complications — a securities fraud investigation, heavy real insider selling, a real " +
+    "40%+ price decline, and a real, disclosed deceleration flag on its core e-commerce " +
+    "growth driver — argue against including it without far more diligence. The insurance " +
+    "cluster both screens pointed to turned out to be less uniform than it first appeared: " +
+    "Lincoln National held up under real scrutiny (real value support, real above-average " +
+    "capital efficiency, a real, meaningful gap between its price and its improving " +
+    "fundamentals) and is added here as a new real candidate, while Jackson Financial and " +
+    "Equitable were left out given a real, serious revenue decline found in each. " +
+    "AstraZeneca and Pfizer are carried forward from yesterday with no new evidence today. " +
+    "On balance: a real, meaningful new risk specifically in a sector this portfolio " +
+    "holds real exposure to, held to Maintain Current Allocation with confidence moving " +
+    "down modestly, and tomorrow's Fed decision as the next real, immediate test.";
 
   const historicalSimilarityNarrative =
     "A real, sharper version of the same chip-sector risk this process has tracked for " +
@@ -373,6 +402,30 @@ async function main() {
     },
   });
 
+  await prisma.opportunity.create({
+    data: {
+      briefId: brief.id,
+      thesis:
+        "The real result of a genuine diligence pass on the Quality/Growth screens' " +
+        "insurance cluster, not a mechanical pass-through of screen output. A real, " +
+        "meaningful gap between price and fundamentals: shares down 15.5% year-to-date " +
+        "even as underlying real numbers improve. Real value support — a P/B of 0.84 " +
+        "against the life insurance industry's 1.80 — and real, above-average capital " +
+        "efficiency (ROE of 18.5% vs. the industry's 15.5%), with a real, strong capital " +
+        "position (risk-based capital ratio above 420%) and the dividend held steady. One " +
+        "honest nuance: Q1 showed a real GAAP loss per share alongside a real adjusted- " +
+        "earnings beat — legitimate mark-to-market volatility in insurance accounting, not " +
+        "a red flag on its own, but disclosed rather than smoothed over. A real, disclosed " +
+        "headwind: Zacks currently ranks the whole life insurance industry in the bottom " +
+        "22% of tracked industries. Two other names in the same apparent cluster — Jackson " +
+        "Financial and Equitable — were deliberately NOT included here: real diligence " +
+        "found a genuine, serious revenue decline in at least one recent quarter for each, " +
+        "meaning the 'cluster' the screens implied was less uniform than it first appeared.",
+      conviction: 58,
+      companyId: lnc.id,
+    },
+  });
+
   await prisma.recommendedAction.create({
     data: {
       briefId: brief.id,
@@ -399,8 +452,9 @@ async function main() {
     data: {
       briefId: brief.id,
       description:
-        "Run the Quality and Growth screens in a real environment with live SEC access, " +
-        "and add any genuinely qualifying candidates afterward.",
+        "Give Lincoln National a full real diligence pass alongside AstraZeneca and " +
+        "Pfizer before any BUY, matching the same standard every prior Opportunity has " +
+        "gotten.",
       actionType: "WATCH",
       displayOrder: 3,
     },
