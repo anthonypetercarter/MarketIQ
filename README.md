@@ -383,6 +383,32 @@ computation for a genuine overweight (and a correct 0, not negative, for an unde
 two holdings correctly sharing one real, shrinking pool, and a small position correctly
 bounded by its own real value rather than an impossible oversell.
 
+### One Real Command for the Daily Research Routine
+
+`docs/decisions.md` #17. Two consecutive real Briefs both had to disclose the same honest
+gap — neither Quality nor Growth had actually been run that day, since they'd only ever
+been triggered manually and separately. `npm run research:daily` runs both in one real
+sequence.
+
+Deliberately kept separate from `council:sync-and-review` — that command is fast and gets
+run often, sometimes several times in one morning; both screens are genuinely slow
+(multiple large, rate-limited SEC fetches), so bolting them on would tax every quick
+portfolio check for a routine that only needs to run once a day.
+
+**Deliberately does not auto-insert anything into a Brief** — the more important real
+boundary. Every real Opportunity so far went through a real review step first, the same
+discipline the Council applies to every verdict; auto-inserting whatever clears a numeric
+threshold would skip that judgment silently, and there's no real evidence yet (Track
+Record needs real accumulated history first) that clearing either threshold actually
+correlates with a good outcome.
+
+`screen-quality.ts` and `screen-growth.ts` were refactored to export their core logic as
+`runQualityScreen()`/`runGrowthScreen()`, guarded so merely _importing_ either function
+never triggers a real fetch as a side effect — verified directly by stubbing `global.fetch`
+to throw on any call and confirming zero fetches happened from the import alone.
+`scripts/research-daily.ts` imports and runs both in sequence; each script still works
+exactly as before when run directly, unchanged.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

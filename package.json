@@ -24,6 +24,7 @@
     "data:diagnose-frames": "tsx scripts/diagnose-frames-response.ts",
     "research:screen-quality": "tsx scripts/screen-quality.ts",
     "research:screen-growth": "tsx scripts/screen-growth.ts",
+    "research:daily": "tsx scripts/research-daily.ts",
     "data:upcoming-earnings": "tsx scripts/upcoming-earnings.ts",
     "council:generate-review": "tsx scripts/generate-portfolio-review.ts",
     "council:track-record": "tsx scripts/evaluate-track-record.ts",

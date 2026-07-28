@@ -17,7 +17,10 @@
  * from this specific screen, not misrepresented — a known, honest gap,
  * not silently papered over.
  *
- * Run with: npx tsx scripts/screen-quality.ts
+ * Run standalone with: npx tsx scripts/screen-quality.ts
+ * Also reused by scripts/research-daily.ts (decision #17) — the core
+ * logic is exported as runQualityScreen so both call sites share the
+ * exact same real fetch-and-compute logic, not a copy of it.
  */
 
 import "dotenv/config";
@@ -33,7 +36,7 @@ function formatBillions(value: number): string {
   return `$${(value / 1_000_000_000).toFixed(2)}B`;
 }
 
-async function main() {
+export async function runQualityScreen(): Promise<void> {
   console.log(`Fetching real Revenues for ${CURRENT_PERIOD}...`);
   const currentRevenueRaw = await fetchFrame("us-gaap", "Revenues", "USD", CURRENT_PERIOD);
   const currentRevenue = parseFrameEntries(currentRevenueRaw);
@@ -80,7 +83,12 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Only run when this file is executed directly (npx tsx scripts/screen-quality.ts),
+// not when research-daily.ts imports runQualityScreen from it — otherwise the
+// import itself would trigger a real, unwanted fetch as a side effect.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runQualityScreen().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

@@ -13,7 +13,10 @@
  * used, not the full fallback list — a company using the alternate real
  * tag is missing from this specific screen, not misrepresented.
  *
- * Run with: npx tsx scripts/screen-growth.ts
+ * Run standalone with: npx tsx scripts/screen-growth.ts
+ * Also reused by scripts/research-daily.ts (decision #17) — the core
+ * logic is exported as runGrowthScreen so both call sites share the
+ * exact same real fetch-and-compute logic, not a copy of it.
  */
 
 import "dotenv/config";
@@ -30,7 +33,7 @@ function formatBillions(value: number): string {
   return `$${(value / 1_000_000_000).toFixed(2)}B`;
 }
 
-async function main() {
+export async function runGrowthScreen(): Promise<void> {
   console.log(`Fetching real Revenues for ${EARLIEST_PERIOD}...`);
   const earliestRaw = await fetchFrame("us-gaap", "Revenues", "USD", EARLIEST_PERIOD);
   const earliestRevenue = parseFrameEntries(earliestRaw);
@@ -72,7 +75,11 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Only run when this file is executed directly, not when research-daily.ts
+// imports runGrowthScreen from it.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runGrowthScreen().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

@@ -1409,6 +1409,59 @@ first version of this decision shipped with.
 
 ---
 
+## 17. One real command for the daily research routine
+
+**Status:** Accepted — the refactor and the import-safety guard are verified; the actual
+live fetches are unverified in this sandbox for the same reason as every other real
+external integration here.
+
+**Context**
+
+Quality and Growth (decisions #14, #15) had been run manually and separately, and two
+consecutive real Briefs both had to disclose the same honest gap — neither screen had
+actually been run that day. A real, low-friction fix: one command that runs both in
+sequence, the same real convenience `council:sync-and-review` already provides for
+price-refresh, portfolio-sync, and review generation.
+
+**Deliberately kept separate from `council:sync-and-review`, not merged into it.** That
+command is fast and gets run often — sometimes several times in one real morning while
+iterating on a Brief. Both screens are genuinely slow (multiple large, rate-limited SEC
+Frame fetches). Bolting them on would make every quick portfolio check pay that real cost
+too, for a research routine that only needs to run once a day.
+
+**Deliberately does not auto-insert anything into a Brief.** This is the real, more
+important boundary, worth stating plainly rather than letting convenience quietly erode
+it: every real Opportunity so far — CVS, First Solar, BND, AstraZeneca — went through a
+real review step first, reading the actual evidence and judging it genuinely warranted
+inclusion, the same discipline the Council itself applies to every verdict it issues.
+Auto-inserting whatever clears a numeric threshold would skip that judgment silently. It
+would also be premature on its own honest terms: there's no real evidence yet that
+clearing either screen's threshold actually correlates with a good real outcome — Track
+Record needs real, accumulated history before that question can even be asked, let alone
+answered. `research-daily.ts` prints real results; a human (or a future Brief-drafting
+pass) still reads and judges them, same as always.
+
+**Architecture:** rather than duplicate either screen's real fetch-and-compute logic,
+`screen-quality.ts` and `screen-growth.ts` were refactored to export their core logic as
+`runQualityScreen()`/`runGrowthScreen()`, guarded so that merely _importing_ either
+function never triggers a real network fetch as a side effect — only an explicit call
+does. `scripts/research-daily.ts` (`npm run research:daily`) imports both and runs them
+in sequence, printed together under clear section headers. Each script also still works
+exactly as before when run directly (`npm run research:screen-quality` /
+`research:screen-growth`), unchanged.
+
+**Verified:** the import-safety guard confirmed directly — importing `screen-quality.ts`
+and `screen-growth.ts` with `global.fetch` stubbed to throw on any call produced zero
+real fetch attempts, confirming an import alone can never trigger an unwanted real
+network call. Direct execution was separately confirmed to still correctly attempt the
+real fetch (failing only on this sandbox's local missing `EDGAR_USER_AGENT`, the same
+expected limitation as every other real external call here, not a logic defect). The
+live, real fetch behavior itself — actually pulling real Quality and Growth results
+together in one run — is unverified in this sandbox for the same reason as every other
+external integration here.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is
