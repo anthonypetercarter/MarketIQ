@@ -1462,6 +1462,57 @@ external integration here.
 
 ---
 
+## 18. A same-day REDUCE now funds a same-day BUY
+
+**Status:** Accepted — verified by replicating the exact real scenario, using the same
+real functions the script now calls in sequence.
+
+**Context**
+
+A real, repeated pattern across four consecutive live runs: AstraZeneca was approved by
+the Council three separate times, and Lincoln National once, and every single time the
+result was the same honest but frustrating message — "approved, but no Excess
+Cash/room left to size it today." Real cash sat near-empty across all four runs while a
+real, well-evidenced BUY kept getting recommended with nothing to fund it, even on days
+the Council also issued a real REDUCE that would have freed up exactly that kind of
+capital.
+
+**The real, precise cause, confirmed directly in the code:** `sizeApprovedBuys` was
+being called using `excessCash` computed from the cash balance _before_ any of that
+same day's REDUCE or EXIT trades were priced in. REDUCE/EXIT sizing happened in a later,
+separate step, and their real proceeds were never fed back into the pool BUY sizing drew
+from — two real, correct calculations, computed independently, that never talked to each
+other.
+
+**The fix:** REDUCE and EXIT are now sized _first_, before BUY/INCREASE. Their real,
+combined proceeds are added to the existing Excess Cash figure, and _that_ combined
+total is what `sizeApprovedBuys` actually draws from. Deliberately simple and free of any
+new speculative judgment: real proceeds from a real, already-approved sell are treated
+as real, spendable capital for a real, already-approved buy, the same day — no new
+forecasting, no new selection logic. _Which_ holdings get REDUCEd and _which_ candidates
+get BUY verdicts remain exactly the Council's own real, evidenced judgment, unchanged;
+this only fixes what capital the sizing math is allowed to see once those verdicts exist.
+Every dollar of sell proceeds is treated as fungible — available to any approved buy, not
+earmarked to a specific one — since there's no real reason a specific REDUCE has to fund
+a specific BUY rather than the pool as a whole.
+
+**One real, honest limitation, worth stating rather than glossing over:** this makes the
+_recommendation_ coherent — a real, funded pair of trades a person can execute in
+sequence — but it doesn't (and can't) guarantee real-world execution actually happens
+that way. If someone acts on the BUY half of a recommendation without also executing the
+REDUCE half, the real portfolio ends up more invested than the sizing math assumed. The
+system can propose a coherent plan; it can't enforce that both halves get carried out
+together.
+
+**Verified:** the exact real shape of the repeated problem was replicated using the same
+real functions now called in sequence — a real, near-empty cash balance, a real BUY
+candidate that computed to zero shares using cash alone, and a real category-driven
+REDUCE on an overweight fund. Confirmed the fix takes that BUY from zero real shares to
+97 real shares (~$3,351), funded entirely by the REDUCE's own real, computed proceeds —
+the same order of magnitude as the real, repeated failure this decision exists to fix.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

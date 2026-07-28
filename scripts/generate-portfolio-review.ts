@@ -181,71 +181,21 @@ async function main() {
   const cashTargetPercent = gaps.find((g) => g.category === "Cash")?.targetPercent ?? 0;
   const excessCash = computeExcessCash(totalPortfolioValue, cashBalance, cashTargetPercent);
 
-  // Buy-side: INCREASE (existing holdings) get priority over brand-new BUY
-  // candidates for the same shared cash pool — reinforcing an already-vetted
-  // position ahead of opening a new one. A real, explicit choice, not an
-  // accident of array order; easy to revisit if it produces the wrong call
-  // in practice.
-  const increaseVerdicts = result.verdicts.filter((v) => v.verdict === "INCREASE" && v.validated);
-  const increaseCandidates = increaseVerdicts.flatMap((v) => {
-    const holding = holdingByTicker.get(v.ticker);
-    if (!holding) return [];
-    return [
-      {
-        ticker: holding.company.ticker,
-        companyName: holding.company.name,
-        currentPrice: holding.company.currentPrice,
-        assetType: holding.company.assetType,
-        currentValue: marketValue(holding),
-      },
-    ];
-  });
-  const newBuyCandidates = result.newPositionVerdicts.map((v) => ({
-    ticker: v.ticker,
-    companyName: v.companyName,
-    currentPrice: v.currentPrice,
-    assetType: v.assetType,
-    currentValue: 0,
-  }));
-
-  const buyTrades = sizeApprovedBuys({
-    candidates: [...increaseCandidates, ...newBuyCandidates],
-    excessCash,
-    totalPortfolioValue,
-  });
-  const buyTradeByTicker = new Map(buyTrades.map((t) => [t.ticker, t]));
-
-  const todaysActions: TodaysAction[] = [];
-
-  for (const v of increaseVerdicts) {
-    todaysActions.push({
-      ticker: v.ticker,
-      companyName: v.companyName,
-      verdict: "INCREASE",
-      evidence: v.evidence,
-      side: "BUY",
-      priceAtVerdict: v.priceAtVerdict,
-      trade: buyTradeByTicker.get(v.ticker) ?? null,
-    });
-  }
-
-  for (const v of result.newPositionVerdicts) {
-    todaysActions.push({
-      ticker: v.ticker,
-      companyName: v.companyName,
-      verdict: "BUY",
-      evidence: v.evidence,
-      side: "BUY",
-      priceAtVerdict: v.currentPrice,
-      trade: buyTradeByTicker.get(v.ticker) ?? null,
-    });
-  }
-
-  // Sell-side: REDUCE can be sized two real, independent ways — over its
-  // own concentration ceiling (unchanged), or as part of a genuine
-  // category rebalance (decision #16's addendum): trimming to help close
-  // a real, disclosed overweight in the category this holding belongs
-  // to. Multiple REDUCEs in the same overweight category share one real,
+  // Sell-side is sized FIRST, before any BUY/INCREASE sizing — a real fix
+  // for a real, repeated problem: AZN and LNC were both independently
+  // approved by the Council multiple times, each time landing on
+  // "approved, but no room to size it today," because BUY sizing used to
+  // only ever see the cash balance as it stood before today's own
+  // REDUCEs were priced in. A same-day REDUCE's real proceeds are real,
+  // spendable capital by the time a person actually executes both trades
+  // in the order this Brief recommends — the fix simply lets sizing see
+  // that, rather than pretending a sell today can't fund a buy today.
+  //
+  // REDUCE can be sized two real, independent ways — over its own
+  // concentration ceiling (unchanged), or as part of a genuine category
+  // rebalance (decision #16's addendum): trimming to help close a real,
+  // disclosed overweight in the category this holding belongs to.
+  // Multiple REDUCEs in the same overweight category share one real,
   // shrinking "gap to close" — the sell-side mirror of the shared cash
   // pool new BUYs already compete for. Whichever real mechanism produces
   // the larger trim is used; if neither applies, the honest "no
@@ -283,6 +233,10 @@ async function main() {
     }
   }
 
+  const reduceTradeByTicker = new Map<
+    string,
+    { sharesToSell: number; estimatedProceeds: number }
+  >();
   for (const v of reduceVerdicts) {
     const holding = holdingByTicker.get(v.ticker);
     const concentrationTrade = holding
@@ -300,6 +254,82 @@ async function main() {
           : categoryTrade
         : (concentrationTrade ?? categoryTrade);
 
+    if (trade) reduceTradeByTicker.set(v.ticker, trade);
+  }
+
+  const exitVerdicts = result.verdicts.filter((v) => v.verdict === "EXIT" && v.validated);
+  const exitTradeByTicker = new Map<string, { sharesToSell: number; estimatedProceeds: number }>();
+  for (const v of exitVerdicts) {
+    const holding = holdingByTicker.get(v.ticker);
+    if (holding) exitTradeByTicker.set(v.ticker, computeExitSizing(holding));
+  }
+
+  const realSellProceedsToday =
+    [...reduceTradeByTicker.values()].reduce((sum, t) => sum + t.estimatedProceeds, 0) +
+    [...exitTradeByTicker.values()].reduce((sum, t) => sum + t.estimatedProceeds, 0);
+  const availableCashForBuys = excessCash + realSellProceedsToday;
+
+  // Buy-side: INCREASE (existing holdings) get priority over brand-new BUY
+  // candidates for the same shared cash pool — reinforcing an already-vetted
+  // position ahead of opening a new one. A real, explicit choice, not an
+  // accident of array order; easy to revisit if it produces the wrong call
+  // in practice.
+  const increaseVerdicts = result.verdicts.filter((v) => v.verdict === "INCREASE" && v.validated);
+  const increaseCandidates = increaseVerdicts.flatMap((v) => {
+    const holding = holdingByTicker.get(v.ticker);
+    if (!holding) return [];
+    return [
+      {
+        ticker: holding.company.ticker,
+        companyName: holding.company.name,
+        currentPrice: holding.company.currentPrice,
+        assetType: holding.company.assetType,
+        currentValue: marketValue(holding),
+      },
+    ];
+  });
+  const newBuyCandidates = result.newPositionVerdicts.map((v) => ({
+    ticker: v.ticker,
+    companyName: v.companyName,
+    currentPrice: v.currentPrice,
+    assetType: v.assetType,
+    currentValue: 0,
+  }));
+
+  const buyTrades = sizeApprovedBuys({
+    candidates: [...increaseCandidates, ...newBuyCandidates],
+    excessCash: availableCashForBuys,
+    totalPortfolioValue,
+  });
+  const buyTradeByTicker = new Map(buyTrades.map((t) => [t.ticker, t]));
+
+  const todaysActions: TodaysAction[] = [];
+
+  for (const v of increaseVerdicts) {
+    todaysActions.push({
+      ticker: v.ticker,
+      companyName: v.companyName,
+      verdict: "INCREASE",
+      evidence: v.evidence,
+      side: "BUY",
+      priceAtVerdict: v.priceAtVerdict,
+      trade: buyTradeByTicker.get(v.ticker) ?? null,
+    });
+  }
+
+  for (const v of result.newPositionVerdicts) {
+    todaysActions.push({
+      ticker: v.ticker,
+      companyName: v.companyName,
+      verdict: "BUY",
+      evidence: v.evidence,
+      side: "BUY",
+      priceAtVerdict: v.currentPrice,
+      trade: buyTradeByTicker.get(v.ticker) ?? null,
+    });
+  }
+
+  for (const v of reduceVerdicts) {
     todaysActions.push({
       ticker: v.ticker,
       companyName: v.companyName,
@@ -307,14 +337,11 @@ async function main() {
       evidence: v.evidence,
       side: "SELL",
       priceAtVerdict: v.priceAtVerdict,
-      trade,
+      trade: reduceTradeByTicker.get(v.ticker) ?? null,
     });
   }
 
-  const exitVerdicts = result.verdicts.filter((v) => v.verdict === "EXIT" && v.validated);
   for (const v of exitVerdicts) {
-    const holding = holdingByTicker.get(v.ticker);
-    const trade = holding ? computeExitSizing(holding) : null;
     todaysActions.push({
       ticker: v.ticker,
       companyName: v.companyName,
@@ -322,7 +349,7 @@ async function main() {
       evidence: v.evidence,
       side: "SELL",
       priceAtVerdict: v.priceAtVerdict,
-      trade,
+      trade: exitTradeByTicker.get(v.ticker) ?? null,
     });
   }
 

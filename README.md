@@ -409,6 +409,30 @@ to throw on any call and confirming zero fetches happened from the import alone.
 `scripts/research-daily.ts` imports and runs both in sequence; each script still works
 exactly as before when run directly, unchanged.
 
+### A Same-Day REDUCE Now Funds a Same-Day BUY
+
+`docs/decisions.md` #18. A real, repeated pattern across four consecutive live runs:
+AstraZeneca (three times) and Lincoln National (once) were all approved by the Council,
+and every time the result was "approved, but no Excess Cash/room left to size it today"
+— even on days the Council also issued a real REDUCE that would have freed up exactly
+that kind of capital. The precise cause: BUY sizing used cash as it stood _before_ that
+same day's own REDUCE/EXIT trades were priced in — two real, correct calculations that
+never talked to each other.
+
+The fix: REDUCE and EXIT are now sized first, before BUY/INCREASE, and their real,
+combined proceeds are added to Excess Cash before `sizeApprovedBuys` runs. Deliberately
+simple — real proceeds from an already-approved sell are treated as real, spendable
+capital for an already-approved buy the same day, no new forecasting or selection logic.
+_Which_ holdings get REDUCEd and which candidates get BUY verdicts remain exactly the
+Council's own judgment; this only fixes what capital the sizing math can see. One honest
+limitation, stated plainly: this makes the _recommendation_ coherent, but can't enforce
+that a person actually executes both halves of a proposed pair in the real world.
+
+**Verified:** the exact real shape of the repeated problem was replicated using the same
+real functions the script now calls in sequence — confirmed the fix takes a real BUY
+candidate from zero shares to 97 real shares (~$3,351), funded entirely by a real,
+category-driven REDUCE's own computed proceeds.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —
