@@ -54,6 +54,28 @@ export async function lookupCik(ticker: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * The reverse of lookupCik — Frame data (used by the Quality, Growth, and
+ * Value screens) only carries a real, plain-number CIK, never a ticker.
+ * Fetches the same real, free mapping file once and builds the full
+ * reverse map, rather than looking up one ticker at a time.
+ */
+export async function buildCikToTickerMap(): Promise<Map<number, string>> {
+  const response = await fetch("https://www.sec.gov/files/company_tickers.json", {
+    headers: { "User-Agent": requireUserAgent() },
+  });
+  if (!response.ok) {
+    throw new Error(`SEC company_tickers.json request failed: ${response.status}`);
+  }
+  const data = (await response.json()) as Record<string, TickerEntry>;
+
+  const map = new Map<number, string>();
+  for (const entry of Object.values(data)) {
+    map.set(entry.cik_str, entry.ticker.toUpperCase());
+  }
+  return map;
+}
+
 /** Raw shape of a single XBRL fact's real value, as SEC actually returns it. */
 interface XbrlFactValue {
   end: string;

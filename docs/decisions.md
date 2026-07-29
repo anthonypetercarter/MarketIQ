@@ -1684,6 +1684,86 @@ project.
 
 ---
 
+## 21. Value screen — the third real factor signal, and the first needing a real price
+
+**Status:** Accepted — pure logic and the two-phase design verified against realistic
+synthetic data. The live Frame fetches (including one real, unverified taxonomy
+assumption, disclosed below) are unverified in this sandbox for the same reason as every
+other external integration here.
+
+**Context**
+
+Asked directly which of the originally-named factors would deliver the most real
+decision-making value now that Quality and Growth existed, the answer was Value — not
+textbook reasoning alone, but because it had already worked, manually: Lincoln National's
+entire real thesis was a value story (P/B of 0.84 against the industry's 1.80), found by
+hand on one name the screens happened to surface for an unrelated reason. A real,
+systematic Value screen scales that exact kind of analysis across the whole market,
+rather than leaving the next LNC to chance.
+
+**The real, structural difference from Quality and Growth:** both of those work entirely
+off EDGAR data. Value's two real ratios — P/E and P/B — both need a _live share price_,
+which EDGAR has no concept of at all. This is the first screen requiring real data fusion
+across two separate real sources.
+
+**Deliberately split into two real phases, not combined into one.** `shortlistValueCandidates`
+filters purely on real fundamentals — no price touched at all — narrowing the field first.
+Only `computeValueScreenResults`, given real prices already fetched for that narrowed
+shortlist, computes the actual ratios. Fusing both into a single pass would have forced
+fetching a real, live price for every candidate up front, most of which the fundamentals
+filter would throw away anyway — real, avoidable cost.
+
+**A real, new gap closed along the way:** Frame data carries a CIK and entity name, never
+a ticker — every prior screen worked entirely in CIK-space. Value is the first to need a
+real ticker (to fetch a real Alpaca price), so `buildCikToTickerMap` was added to
+`edgar.ts`, fetching the same free, public ticker-mapping file `lookupCik` already used,
+but building the full real reverse map in one call rather than looking up one ticker at a
+time.
+
+**Two real design decisions, disclosed rather than picked silently:**
+
+- **A $1B real StockholdersEquity floor**, not the $1B revenue floor Quality and Growth
+  used. Value's own natural inputs never include revenue — refetching it purely for
+  floor-consistency would mean a fourth real Frame call for no other real purpose.
+  Positive net income and positive stockholders' equity are both required outright: a
+  real P/E or P/B computed against a real loss or negative book value is nonsensical, not
+  just unflattering, so those companies are excluded rather than given a misleading or
+  inverted-looking ratio.
+- **"Cheap" is measured against a real, internally-computed median** across the whole
+  qualifying universe itself — not an arbitrary fixed number, and not an external
+  industry-average data source that doesn't exist here and isn't needed. The benchmark
+  comes from the same real dataset the screen already has.
+
+**One real, unverified assumption, disclosed rather than hidden.** Shares outstanding is
+fetched from the `dei` taxonomy's `EntityCommonStockSharesOutstanding` concept — a real,
+different taxonomy than every `us-gaap` fact used so far — as an instantaneous fact (the
+`I` period suffix), the same way `Assets`/`Liabilities` are. This specific combination
+hasn't been confirmed against a live response the way `us-gaap` facts were in
+`scripts/diagnose-frames-response.ts` before Quality was built. Rather than block on a
+separate confirmatory round-trip this sandbox can't perform anyway, the script itself
+names this plainly: if a live run shortlists zero real candidates, the honest first place
+to look is this specific assumption, not the join-and-filter logic.
+
+**Architecture:** `src/lib/research/valueScreen.ts` holds both pure phases.
+`scripts/screen-value.ts` (`npm run research:screen-value`) is the real orchestration —
+three real Frame fetches, a real ticker-map fetch, real fundamentals-only shortlisting,
+then real Alpaca prices fetched only for the survivors via the already-existing
+`fetchSnapshotPrices`, reused as-is with zero new Alpaca client code needed. Wired into
+`npm run research:daily` alongside Quality and Growth, same standalone-research-tool
+discipline — not auto-inserted into any Brief.
+
+**Verified:** the full real join-and-filter logic against realistic synthetic data — a
+company with a real loss correctly excluded before any price would even be fetched, a
+company with no real live price available correctly excluded rather than given a
+fabricated price, and the real P/E/P-B math confirmed exactly correct against
+hand-computed values. The two-phase split itself verified directly: phase one correctly
+excludes a loss-making company using only fundamentals, and phase two correctly computes
+real ratios only for what phase one already shortlisted. The import-safety guard
+(`runValueScreen`, matching the pattern established for Quality and Growth) confirmed to
+never trigger a real fetch merely from being imported by `research-daily.ts`.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

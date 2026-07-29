@@ -348,6 +348,50 @@ revenue-based factor is cheaper than one needing two real facts. Run `npm run
 research:screen-growth` for a real, current shortlist of companies with genuinely
 accelerating, currently-positive growth.
 
+### Value Screen — the Third Real Factor Signal, the First Needing a Real Price
+
+`docs/decisions.md` #21. Named as the highest-value factor to build next specifically
+because it had already worked manually — Lincoln National's entire real thesis was a
+value story (P/B 0.84 vs. the industry's 1.80), found on one name the screens happened to
+surface for an unrelated reason. This scales that exact kind of analysis across the whole
+market.
+
+The real, structural difference from Quality and Growth: both work entirely off EDGAR
+data; Value's two real ratios (P/E, P/B) both need a live share price, which EDGAR has no
+concept of. Deliberately split into two real phases rather than combined: `shortlistValueCandidates`
+filters purely on real fundamentals, no price touched at all; only
+`computeValueScreenResults`, given real prices already fetched for that narrowed
+shortlist, computes the actual ratios — avoiding a real, live price fetch for every
+candidate the fundamentals filter would throw away anyway.
+
+A real, new gap closed along the way: Frame data carries CIK and entity name, never a
+ticker — Value is the first screen needing a real ticker (to fetch a real Alpaca price),
+so `buildCikToTickerMap` was added to `edgar.ts`, building the full real reverse map from
+the same free ticker-mapping file `lookupCik` already used.
+
+Two real design decisions: a **$1B StockholdersEquity floor** (not the revenue floor
+Quality/Growth used, since Value's own inputs don't include revenue), with genuinely
+positive net income and equity both required outright — a real P/E or P/B against a real
+loss or negative book value is nonsensical, not just unflattering. And "cheap" is measured
+against a **real, internally-computed median** across the qualifying universe itself, not
+an arbitrary number or an external industry-average source that doesn't exist here.
+
+One real, unverified assumption, disclosed rather than hidden: shares outstanding comes
+from the `dei` taxonomy's `EntityCommonStockSharesOutstanding`, a genuinely different
+taxonomy than any `us-gaap` fact used so far, as an instantaneous fact — unconfirmed
+against a live response the way `us-gaap` facts were before Quality was built. If a live
+run shortlists zero candidates, this specific assumption is the first place to check.
+
+Run `npm run research:screen-value` standalone, or as part of `npm run research:daily`
+alongside Quality and Growth — same standalone-research-tool discipline, not auto-inserted
+into any Brief.
+
+**Verified:** the full join-and-filter logic against realistic synthetic data — a
+loss-making company excluded before any price would be fetched, a company with no real
+live price excluded rather than fabricated, and the real P/E/P-B math confirmed exactly
+correct against hand-computed values. The two-phase split verified directly, and the
+import-safety guard confirmed to never trigger a real fetch merely from being imported.
+
 ### REDUCE for Real Category Rebalancing, Not Only Concentration Breaches
 
 `docs/decisions.md` #16. A real, live portfolio surfaced the actual gap: the Council was

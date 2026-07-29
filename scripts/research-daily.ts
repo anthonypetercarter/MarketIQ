@@ -22,6 +22,7 @@
 
 import { runQualityScreen } from "./screen-quality";
 import { runGrowthScreen } from "./screen-growth";
+import { runValueScreen } from "./screen-value";
 
 async function main() {
   console.log("=".repeat(70));
@@ -33,6 +34,11 @@ async function main() {
   console.log("GROWTH SCREEN");
   console.log("=".repeat(70));
   await runGrowthScreen();
+
+  console.log(`\n${"=".repeat(70)}`);
+  console.log("VALUE SCREEN");
+  console.log("=".repeat(70));
+  await runValueScreen();
 }
 
 main().catch((e) => {
