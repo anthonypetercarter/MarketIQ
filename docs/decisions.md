@@ -1835,6 +1835,61 @@ both a standard ticker and the literal `ASB-PF` that crashed the live run — co
 real preferred-share ticker is now excluded before any price is ever fetched, while the
 standard ticker passes through correctly.
 
+**Third addendum — Netflix's real 10-for-1 stock split, and the fix the founder scoped
+directly**
+
+With both prior fixes shipped, the Value screen finally ran end to end for real: 687 real
+candidates shortlisted, 615 fully priced. But Netflix showed a real P/E of 3.6 —
+immediately, obviously wrong given Netflix's real, well-known valuation (30s-40s). Rather
+than assume a code bug, two further real diagnostics traced this precisely.
+`scripts/diagnose-netflix-value.ts` confirmed Netflix's real fundamentals were entirely
+correct — a genuinely sensible EPS of $20.37 ($8.71B net income ÷ 427.8M shares) — while
+also confirming the three joined facts came from three real, different filings (different
+accession numbers), ruling out one hypothesis but not yet explaining the absurd ratio.
+Working backward from the reported P/E implied a real price near $73;
+`scripts/diagnose-netflix-price.ts` confirmed Alpaca's real, live price ($72.10) was
+correct and consistent whether fetched alone or in the original 615-ticker batch — no
+code bug in the price fetch either. A real web search then confirmed the actual cause:
+Netflix executed a genuine 10-for-1 stock split, effective November 17, 2025. The real
+shares-outstanding figure EDGAR returned (427.8M) predated the split; Alpaca's real price
+already reflected it. A stock split doesn't change a company's real underlying earnings or
+equity — only how many real shares that total is divided among — so a pre-split share
+count divided into a real, unadjusted net income produces an EPS ten times too low, and
+therefore a P/E ten times too low, while every individual real number (net income, the
+historical share count, the live price) was independently correct.
+
+**Real, structural point worth naming:** this isn't unique to Netflix. Any company that
+executes a real stock split between whenever EDGAR last recorded its share count and
+today's live price will break in exactly this same way — a systemic risk for the whole
+screen, not a one-off.
+
+**The fix, scoped directly with the founder rather than picked unilaterally, in two real
+layers:**
+
+- **A real, most-recent-first cascade for shares outstanding specifically** — four real,
+  consecutive quarters (`CY2026Q1I` back through `CY2025Q2I`), checked in order per
+  company, using whichever is the first real entry found. Net income and stockholders'
+  equity still use one fixed real period each — a stock split doesn't affect either of
+  those totals, so no cascade is needed there; only the share count itself needs to be as
+  current as possible. Economically the right choice, not just a technical workaround: a
+  more recent real share count will already reflect any real, intervening split.
+- **A real, cheap safety net as a second, independent layer** — any result whose P/E falls
+  below 20% of the real, internally-computed median is excluded as an implausible
+  outlier. Costs nothing extra to compute (a filter on data already fetched) and catches
+  whatever real, residual staleness the four-quarter cascade doesn't — a company that
+  hasn't filed within that real window, or some other genuine data quirk. The founder
+  chose both real parameters directly: four quarters back, and the 20%-of-median
+  threshold.
+
+**Verified:** a synthetic test replicating the exact real Netflix scenario — a stale,
+pre-split share count sitting in an older cascade slot, a real, correct post-split count
+in the most recent slot — confirms the shortlist correctly uses the most recent real
+value, producing a real P/E of ~35.4, matching the real, sensible range confirmed by live
+search. A second synthetic test confirms the independent safety net: a company whose
+stale share count slips through every real cascade period except the oldest one produces
+an implausibly low P/E that the 20%-of-median filter correctly catches and excludes,
+while a genuinely normal company is correctly kept.
+
 ---
 
 # North Star Vision

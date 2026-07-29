@@ -377,10 +377,26 @@ against a **real, internally-computed median** across the qualifying universe it
 an arbitrary number or an external industry-average source that doesn't exist here.
 
 One real, unverified assumption, disclosed rather than hidden: shares outstanding comes
-from the `dei` taxonomy's `EntityCommonStockSharesOutstanding`, a genuinely different
-taxonomy than any `us-gaap` fact used so far, as an instantaneous fact — unconfirmed
-against a live response the way `us-gaap` facts were before Quality was built. If a live
-run shortlists zero candidates, this specific assumption is the first place to check.
+from the `dei` taxonomy's `EntityCommonStockSharesOutstanding`, confirmed working via live
+diagnostics after an initial real bug: `parseFrameEntries` required a `start` field
+unconditionally, silently discarding every real instant-fact entry (which never carries
+one) until Value became the first screen to exercise that code path.
+
+A second real bug surfaced once that fix ran live: Alpaca's batch price endpoint rejects
+the entire request if even one symbol is invalid, and a real preferred-share ticker
+crashed the fetch for all 687 candidates at once — fixed with a real, standard-common-
+stock-only ticker filter, which is also a substantive choice, not just a technical one
+(P/E and P/B don't mean anything for a preferred share).
+
+A third, more interesting real issue surfaced after that: Netflix showed an absurd P/E of
+3.6. Two more live diagnostics traced this to a genuine corporate action — Netflix's real
+10-for-1 stock split (November 2025) — that made EDGAR's real, but pre-split, share count
+silently incompatible with Alpaca's real, live, post-split price. The fix, scoped
+directly with the founder: shares outstanding now uses a real, most-recent-first cascade
+across four quarters rather than one fixed period (economically correct, since a split
+doesn't change real earnings or equity, only the share count), plus a real, cheap safety
+net excluding any result whose P/E falls below 20% of the real, computed median as an
+implausible outlier.
 
 Run `npm run research:screen-value` standalone, or as part of `npm run research:daily`
 alongside Quality and Growth — same standalone-research-tool discipline, not auto-inserted
