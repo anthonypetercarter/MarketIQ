@@ -48,6 +48,7 @@
  */
 
 import type { FrameEntry } from "@/lib/marketdata/edgar";
+import { looksLikeOperatingCompany } from "./entityFilters";
 
 /** Real, standard US common-stock tickers are plain uppercase letters — a hyphen, period, or digit reliably signals a non-common security (preferred shares, warrants, units) that Value screening doesn't meaningfully apply to anyway. */
 const STANDARD_TICKER_PATTERN = /^[A-Z]+$/;
@@ -135,6 +136,7 @@ export function shortlistValueCandidates(input: {
     const ticker = tickerByCik.get(equity.cik);
     if (!ticker) continue;
     if (!STANDARD_TICKER_PATTERN.test(ticker)) continue;
+    if (!looksLikeOperatingCompany(equity.entityName)) continue;
 
     candidates.push({
       cik: equity.cik,

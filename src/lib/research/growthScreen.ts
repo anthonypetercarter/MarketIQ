@@ -30,6 +30,7 @@
  */
 
 import type { FrameEntry } from "@/lib/marketdata/edgar";
+import { looksLikeOperatingCompany } from "./entityFilters";
 
 export interface GrowthScreenResult {
   cik: number;
@@ -89,6 +90,11 @@ export function computeGrowthScreen(input: {
     // real lesson as Quality's positive-current-margin requirement,
     // applied here proactively.
     if (recentGrowthPercent <= 0) continue;
+
+    // A passive investment trust/ETF/fund files real financial
+    // statements too, but its real revenue figures (if reported at all)
+    // reflect a passive holding vehicle, not genuine operating growth.
+    if (!looksLikeOperatingCompany(latest.entityName)) continue;
 
     results.push({
       cik,

@@ -34,6 +34,7 @@
  */
 
 import type { FrameEntry } from "@/lib/marketdata/edgar";
+import { looksLikeOperatingCompany } from "./entityFilters";
 
 export interface QualityScreenResult {
   cik: number;
@@ -91,6 +92,12 @@ export function computeQualityScreen(input: {
     // doesn't belong on this specific list, however much better it's
     // gotten. See the module-level doc comment for the real reasoning.
     if (currentMarginPercent <= 0) continue;
+
+    // A passive investment trust/ETF/fund files real financial
+    // statements too, but its real "net income" isn't evidence of
+    // genuine, operating profitability — the vehicle simply holds an
+    // asset and has no real business to measure.
+    if (!looksLikeOperatingCompany(curRev.entityName)) continue;
 
     results.push({
       cik,

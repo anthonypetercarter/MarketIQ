@@ -2036,6 +2036,49 @@ imported by `research-daily.ts`, same pattern as every prior screen.
 
 ---
 
+## 23. A real, shared fix: none of the four screens ever actually enforced "equities only"
+
+**Status:** Accepted — verified against realistic synthetic data and, most importantly,
+against the exact real entity names that surfaced the problem live.
+
+**Context**
+
+Balance Sheet strength's first real, live run produced a top 15 dominated by gold,
+silver, platinum, and Bitcoin ETFs/trusts, plus a real oil fund — a "strongest balance
+sheet" list that was actually just ranking which passive investment vehicles happen to
+carry no debt, which every single one of them trivially does, since they only ever hold a
+commodity or crypto asset and have no real operations to leverage in the first place.
+
+**The real, structural gap this exposed:** every one of the four factor screens
+(decisions #14, #15, #21, #22) documented "equities only" as an intended real boundary in
+its own comments, referencing decision #12's asset-class distinction — but none of the
+actual join-and-filter code ever programmatically checked for it. The boundary was an
+unenforced assumption, not a real check. It went unnoticed in Quality, Growth, and Value
+specifically because a passive trust's near-zero or thin real revenue/income tends to
+either fail an earlier floor or simply not rank prominently near the top of those
+screens' particular rankings — Balance Sheet strength's "lowest leverage wins" ordering
+happened to be the one ranking method that put the problem front and center immediately.
+
+**The fix, built once and shared, not duplicated four times:**
+`src/lib/research/entityFilters.ts`'s `looksLikeOperatingCompany` checks a real, narrow,
+evidenced pattern — `TRUST`, `ETF`, or `FUND` appearing in a real entity's name — kept
+deliberately specific to what was actually confirmed in real, live data rather than a
+speculative, broader keyword list. Applied consistently across all four screens' real
+join-and-filter logic, at the same point each already excludes other invalid real
+results, rather than as a bolt-on afterthought.
+
+**Verified:** the filter tested directly against all thirteen real, confirmed
+non-operating entity names from the actual live Balance Sheet strength output — every one
+correctly excluded — alongside four real, genuine operating companies (including two,
+`ALLIANCEBERNSTEIN HOLDING L.P.` and `QXO, INC.`, that also appeared in the same real
+run) confirmed correctly kept. A second, cross-cutting synthetic test replicated the same
+real trust/ETF/fund pattern independently in each of the four screens (Quality, Growth,
+Value, Balance Sheet strength), confirming each one now correctly excludes a passive
+investment vehicle while keeping a genuine operating company, using the shared function
+rather than four separately-verified implementations.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

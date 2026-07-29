@@ -31,6 +31,7 @@
  */
 
 import type { FrameEntry } from "@/lib/marketdata/edgar";
+import { looksLikeOperatingCompany } from "./entityFilters";
 
 export interface BalanceSheetScreenResult {
   cik: number;
@@ -71,6 +72,12 @@ export function computeBalanceSheetScreen(input: {
     // company can't have a negative one by definition. A violation here
     // signals a genuine data problem, not a legitimate result to rank.
     if (asset.val <= 0 || liability.val <= 0) continue;
+
+    // A passive investment trust/ETF/fund files real financial
+    // statements too, but a near-zero real leverage ratio is
+    // structurally meaningless for a vehicle that just holds a
+    // commodity — not evidence of genuine financial discipline.
+    if (!looksLikeOperatingCompany(asset.entityName)) continue;
 
     const ticker = tickerByCik.get(asset.cik);
     if (!ticker) continue;

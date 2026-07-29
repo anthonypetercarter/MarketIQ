@@ -464,6 +464,26 @@ confirms the join, floor, and ranking logic, with exact leverage ratios matching
 hand-computed values. The import-safety guard confirmed to never trigger a real fetch
 merely from being imported.
 
+### A Real, Shared Fix — None of the Four Screens Enforced "Equities Only"
+
+`docs/decisions.md` #23. Balance Sheet strength's first real, live run produced a top 15
+dominated by gold, silver, platinum, and Bitcoin ETFs/trusts, plus an oil fund — trivially
+"safe" since they only ever hold a commodity and have no real operations to leverage. Each
+of the four screens documented "equities only" as an intended boundary, but none of the
+actual join-and-filter code ever programmatically checked for it — an unenforced
+assumption that Balance Sheet strength's particular ranking method happened to expose
+first.
+
+Fixed once and shared: `src/lib/research/entityFilters.ts`'s `looksLikeOperatingCompany`
+checks a real, narrow pattern (`TRUST`, `ETF`, `FUND` in the entity name) confirmed
+directly against the actual live output, applied consistently across all four screens
+rather than duplicated four times.
+
+**Verified:** all thirteen real, confirmed non-operating names from the actual live run
+correctly excluded, alongside genuine operating companies (including two that appeared in
+the same real run) correctly kept. A cross-cutting test confirms all four screens now
+apply the same real filter correctly.
+
 ### REDUCE for Real Category Rebalancing, Not Only Concentration Breaches
 
 `docs/decisions.md` #16. A real, live portfolio surfaced the actual gap: the Council was
