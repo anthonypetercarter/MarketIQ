@@ -406,10 +406,18 @@ found to be a dead end before any code was written: Alpaca only has two asset cl
 all, with no common-vs-preferred distinction within `us_equity`. The real, actual cause
 turned out to be a genuine, pre-existing bug in this project's own `buildCikToTickerMap`:
 it called `.set()` unconditionally per CIK, meaning whichever real ticker happened to come
-last in SEC's file silently won, common stock or not. The fix reuses SEC's own real
-`title` field (fetched from the start, previously discarded) — a preferred/notes entry's
-title very often names the security type explicitly — to prefer whichever entry looks
-like real common stock, regardless of file order.
+last in SEC's file silently won, common stock or not.
+
+The first attempted fix — preferring whichever entry's `title` didn't look like a
+non-common security — passed every synthetic test but changed nothing against real data.
+A real diagnostic (`scripts/diagnose-kkr-tickers.ts`) found out why: SEC's file uses the
+identical, generic company-level title for every one of a company's real securities
+("KKR & Co. Inc." for all four KKR tickers alike), carrying no per-security signal at all
+— the whole premise was wrong, not just the keyword list. The same live data revealed the
+real, actual pattern instead: a company's real common stock is consistently its
+_shortest_ ticker (`KKR` at 3 characters vs. `KKRT`/`KKR-PD`/`KKRS` at 4-6; `SO` at 2 vs.
+five real junior-note tickers all at 4). `buildCikToTickerMap` now simply prefers the
+shortest real ticker per CIK.
 
 Run `npm run research:screen-value` standalone, or as part of `npm run research:daily`
 alongside Quality and Growth — same standalone-research-tool discipline, not auto-inserted

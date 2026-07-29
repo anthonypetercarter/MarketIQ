@@ -1935,6 +1935,41 @@ case) — confirm the fix correctly resolves to the real common ticker either wa
 test confirms a normal, single-ticker company (the overwhelming majority of real cases)
 is completely unaffected.
 
+**Fifth addendum — the title-based fix passed every synthetic test but did nothing
+against real data; a real diagnostic found the actual, confirmed signal instead**
+
+Running `research:screen-value` again after the fourth addendum's fix shipped produced
+the exact same wrong tickers — `KKRS`, `SOJD`, `SREA` — completely unchanged. The
+synthetic tests had verified the logic correctly against a hypothetical title
+("KKR & Co. Inc. Series C Mandatory Convertible Preferred Stock") that was never actually
+confirmed against SEC's real file. `scripts/diagnose-kkr-tickers.ts` fetched the real,
+live data directly and found the real, honest reason the fix couldn't have worked: SEC's
+`company_tickers.json` uses the identical, generic, company-level title for every real
+security a company has — "KKR & Co. Inc." for all four of KKR's real tickers, "SOUTHERN
+CO" for all six of Southern Company's — carrying no per-security signal at all. The title
+field was never going to distinguish anything; the whole premise was wrong from the start,
+not just the specific keyword list.
+
+**The real, confirmed pattern, found in the same live data:** a company's real common
+stock is consistently its _shortest_ ticker. KKR (3 characters) versus KKRT, KKR-PD, KKRS
+(4-6 characters); SO (2 characters) versus five real junior-subordinated-note tickers,
+all 4 characters (SOJC, SOJF, SOJE, SOMN, SOJD). Preferred and note series get a real,
+systematic base-plus-suffix naming convention specifically to distinguish them from the
+common stock they share an exchange with — a real, structural fact about how these
+securities are actually named, not a guess at string content.
+
+**The fix:** `buildCikToTickerMap` now simply prefers the shortest real ticker for a
+given CIK, replacing the confirmed-non-working title check entirely (removed, not left
+disabled) rather than layering a second heuristic on top of one shown not to work.
+
+**Verified:** the exact real data confirmed live from SEC — all four real KKR entries, all
+six real Southern Company entries, in their real, actual file order and reversed —
+correctly resolves to `KKR` and `SO` respectively in synthetic tests, no longer a
+hypothetical. A normal, single-ticker company remains completely unaffected. The real,
+live test that actually matters — rerunning `research:screen-value` itself — is the next
+real confirmation needed, the same honest standard applied to the fourth addendum's fix
+that turned out not to hold up.
+
 ---
 
 # North Star Vision
