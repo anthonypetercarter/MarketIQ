@@ -23,6 +23,7 @@
 import { runQualityScreen } from "./screen-quality";
 import { runGrowthScreen } from "./screen-growth";
 import { runValueScreen } from "./screen-value";
+import { runBalanceSheetScreen } from "./screen-balance-sheet";
 
 async function main() {
   console.log("=".repeat(70));
@@ -39,6 +40,11 @@ async function main() {
   console.log("VALUE SCREEN");
   console.log("=".repeat(70));
   await runValueScreen();
+
+  console.log(`\n${"=".repeat(70)}`);
+  console.log("BALANCE SHEET STRENGTH SCREEN");
+  console.log("=".repeat(70));
+  await runBalanceSheetScreen();
 }
 
 main().catch((e) => {

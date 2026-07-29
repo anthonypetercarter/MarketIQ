@@ -1972,6 +1972,70 @@ that turned out not to hold up.
 
 ---
 
+## 22. Balance Sheet strength — the fourth real factor signal, and the cheapest so far
+
+**Status:** Accepted — pure logic verified against realistic synthetic data. The live
+Frame fetches are unverified in this sandbox for the same reason as every other external
+integration here, though both real facts used are already independently confirmed working
+instant facts from earlier diagnostics.
+
+**Context**
+
+Named early on as the honest runner-up to Value — real, proactive risk-reduction rather
+than a discovery tool, connecting directly to a real event this portfolio actually lived
+through: the chip-sector REDUCE on ASML, driven by real, escalated sector risk rather
+than any single company's own weakening finances. A real leverage screen is about
+catching financial fragility before a real crisis forces a reactive trim, a genuinely
+different real question than "where's the next opportunity."
+
+**Genuinely the cheapest and structurally simplest screen built so far.** Quality needed
+two real facts across two periods; Growth needed three periods of one fact; Value needed
+three real facts, a live price fusion, and ultimately five rounds of real, live debugging.
+Balance Sheet strength needs exactly two real facts (`Assets`, `Liabilities`), both
+already-confirmed-working instant facts — `Assets` specifically was directly verified
+against a live response in `scripts/diagnose-instant-frame.ts` weeks before Value was ever
+built — and no live price at all, since a leverage ratio is purely computable from EDGAR
+data alone. Structurally, this also sidesteps Value's hardest real problem entirely: a
+real stock split changes a company's share count, not its real total assets or
+liabilities, so this factor was never exposed to the same kind of data-timing mismatch
+that took five rounds of diagnosis to resolve for Value.
+
+**The metric:** total liabilities divided by total assets — a real, standard leverage
+ratio. Lower is a genuinely safer, less-leveraged balance sheet.
+
+**Real design decisions, disclosed rather than picked silently:**
+
+- **A $1B real total-assets floor**, reusing a fact this screen already fetches rather
+  than adding revenue purely for filter-consistency with Quality and Growth — the same
+  "use what's already being fetched" reasoning Value applied to its own equity floor.
+- **Both real facts must be genuinely positive** — a real company can't have negative
+  total assets or total liabilities by definition; a violation signals a genuine data
+  problem, not a legitimate result, and is excluded rather than producing a nonsensical
+  ratio.
+- **Ranked directly by the real, computed ratio itself**, lowest first — not against an
+  internally-computed median the way Value's "cheap" was defined. A genuinely low
+  leverage ratio is straightforwardly safer on its own terms, with no equivalent
+  "implausible outlier" risk requiring a safety net the way Value's stale share counts
+  did.
+
+**Architecture:** `src/lib/research/balanceSheetScreen.ts`'s `computeBalanceSheetScreen`
+is a single-pass pure function — no two-phase split needed, unlike Value, since no price
+fetch depends on a prior filtering step. `scripts/screen-balance-sheet.ts` (`npm run
+research:screen-balance-sheet`) is the real orchestration, following the same
+`runBalanceSheetScreen` export-and-guard pattern as every prior screen. Wired into `npm
+run research:daily` alongside Quality, Growth, and Value — same standalone-research-tool
+discipline, not auto-inserted into any Brief.
+
+**Verified:** a realistic synthetic scenario with a genuinely conservative company (20%
+real leverage), a genuinely heavily-leveraged one (90%), a company missing real
+liabilities data entirely (correctly excluded, not guessed at), and a real company below
+the $1B assets floor (correctly excluded) — confirms the join, floor, and ranking logic
+all work correctly, with the exact real leverage ratios matching hand-computed values.
+The import-safety guard confirmed to never trigger a real fetch merely from being
+imported by `research-daily.ts`, same pattern as every prior screen.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

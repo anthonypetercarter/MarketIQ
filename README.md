@@ -429,6 +429,41 @@ live price excluded rather than fabricated, and the real P/E/P-B math confirmed 
 correct against hand-computed values. The two-phase split verified directly, and the
 import-safety guard confirmed to never trigger a real fetch merely from being imported.
 
+### Balance Sheet Strength — the Fourth Real Factor Signal, the Cheapest So Far
+
+`docs/decisions.md` #22. Named early on as the honest runner-up to Value — real,
+proactive risk reduction rather than a discovery tool, connecting directly to a real
+event this portfolio lived through: the chip-sector REDUCE on ASML, driven by real,
+escalated sector risk rather than any weakening in ASML's own finances specifically.
+
+Genuinely the cheapest and structurally simplest screen so far. Needs exactly two real
+facts (`Assets`, `Liabilities`), both already-confirmed-working instant facts — `Assets`
+specifically was directly verified against a live response weeks before Value was ever
+built — and no live price at all, since a leverage ratio is purely computable from EDGAR
+data alone. This also sidesteps Value's hardest real problem entirely: a real stock split
+changes a company's share count, not its total assets or liabilities, so this factor was
+never exposed to the same kind of data-timing mismatch Value needed five rounds of live
+debugging to resolve.
+
+The metric: total liabilities divided by total assets — lower is a genuinely safer,
+less-leveraged balance sheet. A real $1B total-assets floor reuses a fact already being
+fetched. Both facts must be genuinely positive — a real company can't have negative
+totals by definition. Ranked directly by the real ratio itself, lowest first — no median-
+relative "cheap" definition needed the way Value's was, since a low leverage ratio is
+straightforwardly safer on its own terms, with no equivalent stale-data risk requiring a
+safety net.
+
+Run `npm run research:screen-balance-sheet` standalone, or as part of `npm run
+research:daily` alongside Quality, Growth, and Value — same standalone-research-tool
+discipline, not auto-inserted into any Brief.
+
+**Verified:** a realistic synthetic scenario — a genuinely conservative company (20%
+leverage), a heavily-leveraged one (90%), a company missing real liabilities data
+(correctly excluded), and a company below the real $1B floor (correctly excluded) —
+confirms the join, floor, and ranking logic, with exact leverage ratios matching
+hand-computed values. The import-safety guard confirmed to never trigger a real fetch
+merely from being imported.
+
 ### REDUCE for Real Category Rebalancing, Not Only Concentration Breaches
 
 `docs/decisions.md` #16. A real, live portfolio surfaced the actual gap: the Council was
