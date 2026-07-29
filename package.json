@@ -26,6 +26,7 @@
     "data:diagnose-value-tags": "tsx scripts/diagnose-value-tags.ts",
     "data:diagnose-netflix-value": "tsx scripts/diagnose-netflix-value.ts",
     "data:diagnose-netflix-price": "tsx scripts/diagnose-netflix-price.ts",
+    "data:diagnose-kkr-tickers": "tsx scripts/diagnose-kkr-tickers.ts",
     "research:screen-quality": "tsx scripts/screen-quality.ts",
     "research:screen-growth": "tsx scripts/screen-growth.ts",
     "research:screen-value": "tsx scripts/screen-value.ts",
