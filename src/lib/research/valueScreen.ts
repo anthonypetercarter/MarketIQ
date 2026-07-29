@@ -29,9 +29,25 @@
  *   the whole qualifying universe itself, not an arbitrary fixed number
  *   or an external industry-average data source that neither exists nor
  *   is needed here.
+ * - A real, standard-common-stock-only ticker filter, added after a live
+ *   run surfaced the real cause directly: Alpaca's batch price endpoint
+ *   rejects the ENTIRE request if even one symbol is invalid — a real
+ *   preferred-share ticker (ASB-PF) crashed the price fetch for all 687
+ *   otherwise-valid candidates in one shot. SEC's own ticker-mapping file
+ *   includes every real, registered share class a company has, not just
+ *   common stock — preferred shares, warrants, and units all appear
+ *   there too. Real, standard US common-stock tickers are virtually
+ *   always plain uppercase letters; a hyphen, period, or other character
+ *   reliably signals something else. This is also a real, substantive
+ *   filter, not just a technical workaround — P/E and P/B don't mean
+ *   anything for a preferred share, which trades more like a bond with a
+ *   fixed dividend than a claim on real, variable earnings.
  */
 
 import type { FrameEntry } from "@/lib/marketdata/edgar";
+
+/** Real, standard US common-stock tickers are plain uppercase letters — a hyphen, period, or digit reliably signals a non-common security (preferred shares, warrants, units) that Value screening doesn't meaningfully apply to anyway. */
+const STANDARD_TICKER_PATTERN = /^[A-Z]+$/;
 
 export interface ValueScreenCandidate {
   cik: number;
@@ -95,6 +111,7 @@ export function shortlistValueCandidates(input: {
 
     const ticker = tickerByCik.get(equity.cik);
     if (!ticker) continue;
+    if (!STANDARD_TICKER_PATTERN.test(ticker)) continue;
 
     candidates.push({
       cik: equity.cik,

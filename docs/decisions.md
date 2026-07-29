@@ -1801,6 +1801,40 @@ malformed entry missing even `end` is still correctly rejected. No other real co
 this project referenced `.start` at all, confirmed by a direct search before shipping the
 fix, so no downstream changes were needed.
 
+**Second addendum — the fixed pipeline ran for real, and a different, real failure
+surfaced immediately: one bad ticker crashed the entire price fetch**
+
+With the `parseFrameEntries` bug fixed, `research:screen-value` ran end to end for the
+first time: 5,934 and 2,830 real companies for the two instant facts (matching the
+individual diagnostics almost exactly), correctly narrowed to 687 real, qualifying
+candidates before any price was touched — the whole join-and-filter pipeline confirmed
+working. Fetching real, live prices for those 687 then failed outright: Alpaca's own
+batch snapshot endpoint rejects the _entire_ request if even one symbol is invalid, and
+one real candidate — `ASB-PF`, a real preferred-share ticker — crashed the fetch for all
+687 otherwise-valid companies in one shot.
+
+**Real cause:** SEC's own ticker-mapping file lists every real, registered share class a
+company has, not only common stock — preferred shares, warrants, and units all appear
+there too, each keeping the underlying company's real CIK. Nothing in the shortlisting
+logic distinguished between them.
+
+**The fix, deliberately scoped to Value specifically, not to `fetchSnapshotPrices` itself**
+— other real scripts already depend on that function's current, simple behavior with
+small, curated ticker lists, and changing its core behavior risked a real regression
+elsewhere for a problem that's actually specific to querying an uncurated, real
+market-wide list. A real, standard-common-stock-only filter was added to
+`shortlistValueCandidates`: a real US common-stock ticker is virtually always plain
+uppercase letters, and a hyphen, period, or digit reliably signals something else. This is
+a real, substantive filter, not just a technical workaround — P/E and P/B don't mean
+anything for a preferred share, which trades more like a bond with a fixed dividend than a
+claim on real, variable earnings, so excluding it is correct on the merits, not only
+convenient.
+
+**Verified:** a synthetic test replicating the exact real failure — a shortlist containing
+both a standard ticker and the literal `ASB-PF` that crashed the live run — confirms the
+real preferred-share ticker is now excluded before any price is ever fetched, while the
+standard ticker passes through correctly.
+
 ---
 
 # North Star Vision
