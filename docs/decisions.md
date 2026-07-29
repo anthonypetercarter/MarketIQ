@@ -1762,6 +1762,45 @@ real ratios only for what phase one already shortlisted. The import-safety guard
 (`runValueScreen`, matching the pattern established for Quality and Growth) confirmed to
 never trigger a real fetch merely from being imported by `research-daily.ts`.
 
+**Addendum — a real, genuine bug in `parseFrameEntries` itself, found through two rounds
+of live diagnostics, not a tag or taxonomy problem**
+
+The disclosed, unverified assumption above turned out to be a red herring. The first
+live run of `research:screen-value` shortlisted zero real candidates, with both real
+instant facts (`StockholdersEquity`, `EntityCommonStockSharesOutstanding`) returning zero
+results while the duration fact (`NetIncomeLoss`) worked normally. Rather than guess,
+`scripts/diagnose-instant-frame.ts` tested a well-known instant fact (`Assets`) directly
+and got 6,249 real results — ruling out the instant-period format itself.
+`scripts/diagnose-value-tags.ts` then tested all three real facts the Value screen
+actually uses, individually — and every single one returned solid, real data (5,934,
+2,264, and 2,830 companies respectively). Neither hypothesis (a tag-name inconsistency, a
+`dei`-taxonomy limitation) was correct. Re-running `research:screen-value` itself
+afterward still returned zero, in a completely fresh run — ruling out a transient,
+rate-limit-style explanation too.
+
+**The real, precise cause:** `parseFrameEntries` required every entry to have a real
+`start` field as a string — a real, silent oversight from when the function was first
+built and tested exclusively against duration facts (Revenues, NetIncomeLoss), which
+always carry both `start` and `end`. A real instant fact — confirmed directly in the
+diagnostic scripts' own raw output — never carries `start` at all, only `end` (the single
+as-of date a balance-sheet figure is measured on). The validation silently discarded
+every real instant-fact entry, one hundred percent of the time, while duration facts kept
+working normally and masked the bug completely — until Value became the first screen to
+actually exercise the instant-fact code path Quality and Growth never touched.
+
+**The fix:** `FrameEntry.start` is now `string | undefined`, and `parseFrameEntries` only
+requires the fields genuinely present on every real Frame entry regardless of fact
+type — `cik`, `entityName`, `val`, and `end` — capturing `start` when present rather than
+requiring it unconditionally.
+
+**Verified:** a real instant-fact entry, shaped exactly like the diagnostic scripts' own
+confirmed raw output (no `start` field at all), now parses correctly with `start`
+correctly `undefined`, never fabricated. A real duration-fact entry (with a real `start`)
+still parses identically to before — zero regression confirmed directly. A genuinely
+malformed entry missing even `end` is still correctly rejected. No other real code in
+this project referenced `.start` at all, confirmed by a direct search before shipping the
+fix, so no downstream changes were needed.
+
 ---
 
 # North Star Vision

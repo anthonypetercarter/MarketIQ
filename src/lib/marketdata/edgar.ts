@@ -283,7 +283,8 @@ export async function fetchFrame(
 export interface FrameEntry {
   cik: number;
   entityName: string;
-  start: string;
+  /** Only present on a real duration fact (a period, like annual revenue) — genuinely absent on a real instant fact (a point-in-time balance, like total assets or stockholders' equity), confirmed directly against a live response. Never fabricated when missing. */
+  start: string | undefined;
   end: string;
   val: number;
 }
@@ -291,7 +292,13 @@ export interface FrameEntry {
 /**
  * Pure function: extracts the real per-company array from a Frame
  * response, skipping any entry missing a real cik, entityName, or
- * numeric val rather than guessing at one.
+ * numeric val rather than guessing at one. `end` is required (present on
+ * both duration and instant facts); `start` is captured when present but
+ * never required — a real, live bug this exact fix corrects: an earlier
+ * version required `start` unconditionally, silently discarding every
+ * real instant-fact entry (which never carries it), while duration facts
+ * kept working normally and masked the problem until the Value screen
+ * became the first to actually query an instant fact.
  */
 export function parseFrameEntries(raw: unknown): FrameEntry[] {
   if (!raw || typeof raw !== "object" || !("data" in raw) || !Array.isArray(raw.data)) {
@@ -304,7 +311,6 @@ export function parseFrameEntries(raw: unknown): FrameEntry[] {
       typeof item?.cik !== "number" ||
       typeof item?.entityName !== "string" ||
       typeof item?.val !== "number" ||
-      typeof item?.start !== "string" ||
       typeof item?.end !== "string"
     ) {
       continue;
@@ -312,7 +318,7 @@ export function parseFrameEntries(raw: unknown): FrameEntry[] {
     entries.push({
       cik: item.cik,
       entityName: item.entityName,
-      start: item.start,
+      start: typeof item.start === "string" ? item.start : undefined,
       end: item.end,
       val: item.val,
     });
