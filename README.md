@@ -398,6 +398,19 @@ doesn't change real earnings or equity, only the share count), plus a real, chea
 net excluding any result whose P/E falls below 20% of the real, computed median as an
 implausible outlier.
 
+A fourth real issue surfaced next in the same family: several results (`KKRS` for KKR,
+`SOJD` for Southern Company) were real preferred/notes tickers slipping past the standard-
+ticker filter with no hyphen or obvious suffix to catch. The first proposed fix — checking
+Alpaca's own asset-class metadata — was verified against Alpaca's real, current docs and
+found to be a dead end before any code was written: Alpaca only has two asset classes at
+all, with no common-vs-preferred distinction within `us_equity`. The real, actual cause
+turned out to be a genuine, pre-existing bug in this project's own `buildCikToTickerMap`:
+it called `.set()` unconditionally per CIK, meaning whichever real ticker happened to come
+last in SEC's file silently won, common stock or not. The fix reuses SEC's own real
+`title` field (fetched from the start, previously discarded) — a preferred/notes entry's
+title very often names the security type explicitly — to prefer whichever entry looks
+like real common stock, regardless of file order.
+
 Run `npm run research:screen-value` standalone, or as part of `npm run research:daily`
 alongside Quality and Growth — same standalone-research-tool discipline, not auto-inserted
 into any Brief.

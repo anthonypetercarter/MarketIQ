@@ -1890,6 +1890,51 @@ stale share count slips through every real cascade period except the oldest one 
 an implausibly low P/E that the 20%-of-median filter correctly catches and excludes,
 while a genuinely normal company is correctly kept.
 
+**Fourth addendum — the real, live run afterward surfaced yet another category of the
+same underlying problem, and the first proposed fix turned out to be a dead end**
+
+With the split fix and outlier net both shipped, the Value screen's top-15 no longer
+contained anything as absurd as Netflix's original 3.6, and the real, computed medians
+(24.5 P/E, 2.65 P/B) looked like a genuinely sensible market-wide benchmark. But several
+of the actual names were still wrong in a familiar way: `KKRS` was reported for KKR & Co.
+(real common ticker `KKR`), `SOJD` for Southern Company (real common ticker `SO`), `SREA`
+for Sempra (real common ticker `SRE`), `SRJN` for Spire (real common ticker `SR`) — the
+same underlying issue as the earlier `ASB-PF`/`NTRSO` cases, just without a hyphen or an
+obvious added-letter suffix the existing ticker-pattern filter could catch.
+
+The first proposed fix — checking Alpaca's own asset-class metadata to distinguish common
+stock from other security types — was checked against Alpaca's real, current
+documentation before building anything, and found to be a genuine dead end: Alpaca's real
+Assets API has only two asset classes total, `us_equity` and `crypto`, with no further
+distinction between common and preferred _within_ `us_equity`. Building against this
+would not have solved the actual problem.
+
+**The real, actual cause, found instead in code already in this project:**
+`buildCikToTickerMap` (added for Value's original build) looped over SEC's real
+ticker-mapping file and called `.set()` unconditionally for every entry sharing a CIK —
+meaning whichever real ticker simply happened to come _last_ in the raw JSON's iteration
+order silently won, with zero regard for whether it was actually common stock. SEC's own
+file lists every real, registered security a company has under one CIK — common stock,
+preferred shares, notes — and this was a genuine, pre-existing bug in how the reverse map
+got built, not something new the split fix introduced.
+
+**The fix:** SEC's ticker-mapping file already carries a real `title` field per entry —
+fetched from the start, previously discarded entirely. A real, common security's title is
+typically just the company name; a preferred/notes/warrant entry's title very often names
+the security type explicitly (e.g., "KKR & Co. Inc. Series C Mandatory Convertible
+Preferred Stock"). `buildCikToTickerMap` now checks a real, disclosed pattern of common
+non-equity title keywords (PREFERRED, PFD, PREF, NOTES, WARRANTS, DEPOSITARY, UNITS,
+RIGHTS) and only replaces an existing map entry when the new one does _not_ match this
+pattern — meaning a CIK ends up mapped to whichever real entry looks like common stock,
+regardless of what order the raw file happens to list them in.
+
+**Verified:** three synthetic tests replicating the exact real KKR and Southern Company
+cases in _both_ possible real orderings — common stock listed first (matching KKR's real
+file order) and preferred/notes listed first (Southern Company's real, harder, reverse
+case) — confirm the fix correctly resolves to the real common ticker either way. A third
+test confirms a normal, single-ticker company (the overwhelming majority of real cases)
+is completely unaffected.
+
 ---
 
 # North Star Vision

@@ -55,10 +55,35 @@ export async function lookupCik(ticker: string): Promise<string | null> {
 }
 
 /**
+ * Real, common title-text signals for a non-common security — a
+ * preferred share, note, warrant, unit, or similar hybrid instrument.
+ * SEC's own ticker-mapping file lists every real, registered security a
+ * company has under the same CIK, and its real `title` field very often
+ * names the security type explicitly (e.g., "KKR & CO INC. SERIES C
+ * PREFERRED STOCK"), a real, EDGAR-native signal this project already
+ * fetches but previously discarded.
+ */
+const NON_COMMON_TITLE_PATTERN =
+  /PREFERRED|\bPFD\b|\bPREF\b|NOTES?\b|WARRANTS?\b|DEPOSITARY|\bUNITS?\b|\bRIGHTS\b/i;
+
+/**
  * The reverse of lookupCik — Frame data (used by the Quality, Growth, and
  * Value screens) only carries a real, plain-number CIK, never a ticker.
  * Fetches the same real, free mapping file once and builds the full
  * reverse map, rather than looking up one ticker at a time.
+ *
+ * A real, genuine bug this function had until now: SEC's own file lists
+ * every real, registered security a company has under the same CIK —
+ * common stock, preferred shares, notes, warrants — and naively calling
+ * `.set()` in a loop meant whichever entry happened to come LAST in the
+ * raw JSON silently won, with zero regard for which one was actually
+ * common stock. This is exactly how tickers like `KKRS` (KKR's real
+ * preferred stock) or `SOJD` (Southern Company's) ended up mapped to
+ * companies whose real common stock trades under a completely different,
+ * shorter ticker (`KKR`, `SO`) — a live discovery from the Value screen's
+ * own real output, not a hypothetical. Fixed by preferring whichever
+ * entry's real `title` doesn't look like a non-common security when a CIK
+ * maps to more than one real ticker.
  */
 export async function buildCikToTickerMap(): Promise<Map<number, string>> {
   const response = await fetch("https://www.sec.gov/files/company_tickers.json", {
@@ -71,7 +96,20 @@ export async function buildCikToTickerMap(): Promise<Map<number, string>> {
 
   const map = new Map<number, string>();
   for (const entry of Object.values(data)) {
-    map.set(entry.cik_str, entry.ticker.toUpperCase());
+    const existingTicker = map.get(entry.cik_str);
+    if (!existingTicker) {
+      map.set(entry.cik_str, entry.ticker.toUpperCase());
+      continue;
+    }
+
+    // A CIK already has an entry — only replace it if the new one looks
+    // more like real common stock than what's already there. Never
+    // replace a real, already-preferred common-stock-looking entry with
+    // one that looks like a non-common security.
+    const isNewEntryNonCommon = NON_COMMON_TITLE_PATTERN.test(entry.title);
+    if (!isNewEntryNonCommon) {
+      map.set(entry.cik_str, entry.ticker.toUpperCase());
+    }
   }
   return map;
 }
