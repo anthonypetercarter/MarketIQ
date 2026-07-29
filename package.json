@@ -22,6 +22,7 @@
     "data:verify-fred": "tsx scripts/verify-fred.ts",
     "data:verify-edgar": "tsx scripts/verify-edgar.ts",
     "data:diagnose-frames": "tsx scripts/diagnose-frames-response.ts",
+    "data:diagnose-instant-frame": "tsx scripts/diagnose-instant-frame.ts",
     "research:screen-quality": "tsx scripts/screen-quality.ts",
     "research:screen-growth": "tsx scripts/screen-growth.ts",
     "research:screen-value": "tsx scripts/screen-value.ts",
