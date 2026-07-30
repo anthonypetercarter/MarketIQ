@@ -24,19 +24,25 @@
  */
 
 import "dotenv/config";
-import { fetchFrame, parseFrameEntries } from "../src/lib/marketdata/edgar";
+import { fetchFrame, parseFrameEntries, buildCikToTickerMap } from "../src/lib/marketdata/edgar";
 import { computeQualityScreen } from "../src/lib/research/qualityScreen";
+import type { QualityScreenResult } from "../src/lib/research/qualityScreen";
 
 const CURRENT_PERIOD = "CY2024";
 const PRIOR_PERIOD = "CY2023";
 const MIN_REVENUE_FLOOR = 1_000_000_000;
 const PACING_MS = 200;
 
+/** A real QualityScreenResult with its ticker resolved — added as a real, disclosed enhancement (decision #24) so callers outside this script (like the daily Portfolio Review) have a real, usable ticker, not just CIK and entity name. */
+export interface QualityScreenResultWithTicker extends QualityScreenResult {
+  ticker: string;
+}
+
 function formatBillions(value: number): string {
   return `$${(value / 1_000_000_000).toFixed(2)}B`;
 }
 
-export async function runQualityScreen(): Promise<void> {
+export async function runQualityScreen(): Promise<QualityScreenResultWithTicker[]> {
   console.log(`Fetching real Revenues for ${CURRENT_PERIOD}...`);
   const currentRevenueRaw = await fetchFrame("us-gaap", "Revenues", "USD", CURRENT_PERIOD);
   const currentRevenue = parseFrameEntries(currentRevenueRaw);
@@ -74,13 +80,22 @@ export async function runQualityScreen(): Promise<void> {
   console.log(
     `\n${results.length} real companies passed the floor and had complete data in both periods.`,
   );
+
+  console.log("\nFetching the real CIK-to-ticker mapping...");
+  const tickerByCik = await buildCikToTickerMap();
+  const resultsWithTicker: QualityScreenResultWithTicker[] = results.flatMap((r) => {
+    const ticker = tickerByCik.get(r.cik);
+    return ticker ? [{ ...r, ticker }] : [];
+  });
+
   console.log(`\nTop 15 by genuinely improving margin (${PRIOR_PERIOD} -> ${CURRENT_PERIOD}):\n`);
-  for (const r of results.slice(0, 15)) {
+  for (const r of resultsWithTicker.slice(0, 15)) {
     const sign = r.marginChangePoints >= 0 ? "+" : "";
     console.log(
-      `  ${r.entityName.padEnd(35)} revenue ${formatBillions(r.currentRevenue).padEnd(10)} margin ${r.priorMarginPercent.toFixed(1)}% -> ${r.currentMarginPercent.toFixed(1)}% (${sign}${r.marginChangePoints.toFixed(1)}pt)`,
+      `  ${r.entityName.padEnd(35)} ${r.ticker.padEnd(8)} revenue ${formatBillions(r.currentRevenue).padEnd(10)} margin ${r.priorMarginPercent.toFixed(1)}% -> ${r.currentMarginPercent.toFixed(1)}% (${sign}${r.marginChangePoints.toFixed(1)}pt)`,
     );
   }
+  return resultsWithTicker;
 }
 
 // Only run when this file is executed directly (npx tsx scripts/screen-quality.ts),

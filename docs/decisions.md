@@ -2079,6 +2079,82 @@ rather than four separately-verified implementations.
 
 ---
 
+## 24. All four factor screens now feed every real Portfolio Review, labeled honestly
+
+**Status:** Accepted — the full chain verified with synthetic data; the real, live cost
+and behavior is the next thing to observe once run for real.
+
+**Context**
+
+The founder asked directly: every time this process runs, pull all four factor screens'
+real, current output and give the Council access to it — not just when someone happens to
+run them manually and share the results. The reasoning: more real, current information
+available to the Council's own judgment is better than less, as long as it's used
+correctly.
+
+**Two genuinely different concerns were separated before building anything.** The first —
+do I trust these screens' code — was honestly answered no, not yet: this single week
+found and fixed six real, distinct bugs across the four screens, including one,
+cross-cutting bug (decision #23) that had been silently present since Quality was first
+built. The second, more fundamental concern is different in kind: there's no real
+evidence yet that clearing any of these screens' thresholds actually correlates with a
+good real outcome — that's exactly why Track Record exists, and it needs real,
+accumulated history before that question can even be asked.
+
+**The resolution:** neither concern is actually a reason to withhold the _information_ —
+only a reason to be careful about what _conclusion_ gets drawn from it. Feeding the
+Council real, raw, honestly-labeled screen output as additional context is a different
+thing entirely from what was being resisted before, which was silently promoting a
+screen result straight into a vetted Opportunity with a real conviction score. The
+Council already handles exactly this kind of disclosed uncertainty well elsewhere — ASML's
+`null` fundamentals, for instance — weighing honest caveats with its own judgment rather
+than either ignoring them or over-trusting them.
+
+**Architecture:** each of the four screens' orchestration functions
+(`runQualityScreen`, `runGrowthScreen`, `runValueScreen`, `runBalanceSheetScreen`) now
+_returns_ its real results as a real array, not only printing them — a genuine,
+additional improvement along the way: Quality and Growth previously exposed only CIK and
+entity name, with no real, usable ticker at all; both now resolve a real ticker via the
+same `buildCikToTickerMap` Value and Balance Sheet strength already use, a real fix
+worth having on its own regardless of this integration. `ResearchPacket` gained a new
+`screenResults` field — the real, top-10 results from each screen, in a simplified,
+packet-specific shape — populated in `generate-portfolio-review.ts`, which now runs all
+four screens every time it runs, with **per-screen error resilience**: a real, live
+failure in any one screen (a genuine SEC outage, a real rate limit) is caught and logged,
+degrading that screen's contribution to an empty list rather than crashing the entire
+daily review over a research signal that was never required to complete it.
+
+**The real, load-bearing constraint, stated explicitly in the Council's own prompt:** a
+new directive makes the distinction unmistakable — `screenResults` is real, current, raw
+data that has been through _none_ of the individual diligence every actual `candidates`
+entry has received (the same real diligence that caught AppLovin's securities-fraud
+investigation despite excellent raw numbers, or Jackson Financial's real revenue decline
+despite surfacing alongside a genuinely strong peer). A ticker appearing in
+`screenResults` is explicitly _not_ a valid target for a new BUY verdict, regardless of
+how favorable its numbers look; the correct real response to something promising is to
+name it as a future research action, not act on it today.
+
+**A real, deliberate cost, accepted openly rather than hidden:** this makes
+`council:sync-and-review` meaningfully slower every time it runs, since it now performs
+four screens' worth of real, multi-call SEC fetches on top of what was already a fast,
+frequently-run command. Baked directly into the standard daily flow rather than kept as a
+separate step, per the founder's explicit request that this happen "every time," not only
+when remembered.
+
+**Verified:** the full chain confirmed with synthetic data — a packet correctly carrying
+real screen results through when provided, and correctly degrading to `null` (never
+fabricated empty arrays) when omitted entirely. The per-screen resilience pattern
+confirmed directly: one screen throwing a real, simulated error degrades to an empty
+result for that screen alone, while the others complete normally and the whole review
+survives. The ticker-resolution enhancement to Quality and Growth verified separately: a
+company with a resolvable real ticker is kept and tagged correctly, one without any
+resolvable ticker is dropped rather than included with a missing or fabricated value. The
+real, live cost and the Council's actual behavior with this new information are both
+unverified in this sandbox for the same reason as every other external integration here —
+the next real run is the true test.
+
+---
+
 # North Star Vision
 
 **Status:** Vision — not scheduled, not an implementation decision. Nothing below is

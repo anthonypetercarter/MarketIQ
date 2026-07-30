@@ -71,6 +71,54 @@ export interface ResearchPacketAllocationGap {
   status: string;
 }
 
+/**
+ * Real, raw, unvetted output from the four factor screens (decisions
+ * #14, #15, #21, #22) — decision #24. Deliberately distinct from
+ * `candidates` above: nothing here has been through the real, individual
+ * diligence pass every actual Opportunity has received (checking for
+ * real, disclosed complications the way AppLovin's securities-fraud
+ * investigation or Jackson Financial's revenue decline were caught).
+ * This is real, current, algorithmically-surfaced data — genuinely
+ * useful as additional context, but explicitly not equivalent to a
+ * vetted candidate, and the Council is told so directly in the prompt.
+ * Top 10 from each screen only, to keep the packet a reasonable size —
+ * the full real output is always available by running the screen
+ * directly.
+ */
+export interface ResearchPacketQualityResult {
+  ticker: string;
+  entityName: string;
+  currentMarginPercent: number;
+  marginChangePoints: number;
+}
+
+export interface ResearchPacketGrowthResult {
+  ticker: string;
+  entityName: string;
+  recentGrowthPercent: number;
+  accelerationPoints: number;
+}
+
+export interface ResearchPacketValueResult {
+  ticker: string;
+  entityName: string;
+  realPriceToEarnings: number;
+  realPriceToBook: number;
+}
+
+export interface ResearchPacketBalanceSheetResult {
+  ticker: string;
+  entityName: string;
+  leverageRatio: number;
+}
+
+export interface ResearchPacketScreenResults {
+  quality: ResearchPacketQualityResult[];
+  growth: ResearchPacketGrowthResult[];
+  value: ResearchPacketValueResult[];
+  balanceSheet: ResearchPacketBalanceSheetResult[];
+}
+
 export interface ResearchPacket {
   briefDate: string;
   councilRecommendation: string;
@@ -86,6 +134,8 @@ export interface ResearchPacket {
   candidates: ResearchPacketCandidate[];
   cashBalance: number;
   totalPortfolioValue: number;
+  /** Real, raw, unvetted output from the four factor screens (decision #24) — null when the screens weren't run for this review, never fabricated. */
+  screenResults: ResearchPacketScreenResults | null;
 }
 
 interface BriefForPacket {
@@ -120,6 +170,8 @@ export function assembleResearchPacket(input: {
   fundamentalsByTicker?: Map<string, KeyFundamentals | null>;
   /** Each holding's real conviction score from the most recent PAST review (decision #20), keyed by ticker — pre-fetched by the caller, kept pure here. Missing entries treated as undefined (no real prior score), never fabricated. */
   priorConvictionByTicker?: Map<string, number | undefined>;
+  /** Real, raw, pre-fetched screen results (decision #24) — kept pure here, undefined/omitted treated as no screen data available for this review, never fabricated. */
+  screenResults?: ResearchPacketScreenResults | null;
 }): ResearchPacket {
   const {
     holdings,
@@ -128,6 +180,7 @@ export function assembleResearchPacket(input: {
     allocationGaps,
     fundamentalsByTicker,
     priorConvictionByTicker,
+    screenResults,
   } = input;
   const totalPortfolioValue = computeTotalPortfolioValue(holdings, cashBalance);
 
@@ -191,5 +244,6 @@ export function assembleResearchPacket(input: {
     candidates,
     cashBalance,
     totalPortfolioValue,
+    screenResults: screenResults ?? null,
   };
 }

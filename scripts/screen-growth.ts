@@ -20,8 +20,9 @@
  */
 
 import "dotenv/config";
-import { fetchFrame, parseFrameEntries } from "../src/lib/marketdata/edgar";
+import { fetchFrame, parseFrameEntries, buildCikToTickerMap } from "../src/lib/marketdata/edgar";
 import { computeGrowthScreen } from "../src/lib/research/growthScreen";
+import type { GrowthScreenResult } from "../src/lib/research/growthScreen";
 
 const EARLIEST_PERIOD = "CY2022";
 const MIDDLE_PERIOD = "CY2023";
@@ -29,11 +30,16 @@ const LATEST_PERIOD = "CY2024";
 const MIN_REVENUE_FLOOR = 1_000_000_000;
 const PACING_MS = 200;
 
+/** A real GrowthScreenResult with its ticker resolved (decision #24), same real enhancement as Quality's. */
+export interface GrowthScreenResultWithTicker extends GrowthScreenResult {
+  ticker: string;
+}
+
 function formatBillions(value: number): string {
   return `$${(value / 1_000_000_000).toFixed(2)}B`;
 }
 
-export async function runGrowthScreen(): Promise<void> {
+export async function runGrowthScreen(): Promise<GrowthScreenResultWithTicker[]> {
   console.log(`Fetching real Revenues for ${EARLIEST_PERIOD}...`);
   const earliestRaw = await fetchFrame("us-gaap", "Revenues", "USD", EARLIEST_PERIOD);
   const earliestRevenue = parseFrameEntries(earliestRaw);
@@ -64,15 +70,24 @@ export async function runGrowthScreen(): Promise<void> {
   console.log(
     `\n${results.length} real companies passed the floor and had complete data in all three periods.`,
   );
+
+  console.log("\nFetching the real CIK-to-ticker mapping...");
+  const tickerByCik = await buildCikToTickerMap();
+  const resultsWithTicker: GrowthScreenResultWithTicker[] = results.flatMap((r) => {
+    const ticker = tickerByCik.get(r.cik);
+    return ticker ? [{ ...r, ticker }] : [];
+  });
+
   console.log(
     `\nTop 15 by genuinely accelerating growth (${EARLIEST_PERIOD} -> ${MIDDLE_PERIOD} -> ${LATEST_PERIOD}):\n`,
   );
-  for (const r of results.slice(0, 15)) {
+  for (const r of resultsWithTicker.slice(0, 15)) {
     const sign = r.accelerationPoints >= 0 ? "+" : "";
     console.log(
-      `  ${r.entityName.padEnd(35)} revenue ${formatBillions(r.latestRevenue).padEnd(10)} growth ${r.priorGrowthPercent.toFixed(1)}% -> ${r.recentGrowthPercent.toFixed(1)}% (${sign}${r.accelerationPoints.toFixed(1)}pt)`,
+      `  ${r.entityName.padEnd(35)} ${r.ticker.padEnd(8)} revenue ${formatBillions(r.latestRevenue).padEnd(10)} growth ${r.priorGrowthPercent.toFixed(1)}% -> ${r.recentGrowthPercent.toFixed(1)}% (${sign}${r.accelerationPoints.toFixed(1)}pt)`,
     );
   }
+  return resultsWithTicker;
 }
 
 // Only run when this file is executed directly, not when research-daily.ts

@@ -643,6 +643,44 @@ different stored scores (42 and 88), the real query pattern, and the real packet
 function — confirmed the whole chain, including the real 46-point gap reaching the packet
 intact, well clear of the real 10-point margin.
 
+### All Four Factor Screens Now Feed Every Real Portfolio Review
+
+`docs/decisions.md` #24. Asked directly to pull all four screens' real, current output
+into every real review, not just when someone happens to run them manually — two genuinely
+different concerns were separated first. Trust in the _code_ was honestly answered no,
+not yet, given six real bugs found and fixed this single week. A separate, more
+fundamental concern: there's no real evidence yet that clearing a screen's threshold
+correlates with a good outcome — exactly why Track Record exists. Neither concern is
+actually a reason to withhold the _information_, only a reason to be careful about what
+_conclusion_ gets drawn from it.
+
+Each screen's orchestration function now returns its real results, not just prints them —
+Quality and Growth also gained a genuine, standalone improvement along the way: both now
+resolve a real ticker (previously CIK/entity-name only), reusing the same
+`buildCikToTickerMap` Value and Balance Sheet strength already use. `ResearchPacket`
+gained a `screenResults` field — real, top-10 results from each screen — populated in
+`generate-portfolio-review.ts`, which now runs all four screens every time, with
+**per-screen error resilience**: a real failure in any one screen degrades to an empty
+list for that screen rather than crashing the whole daily review.
+
+The load-bearing piece is a new, explicit Council directive: `screenResults` has been
+through _none_ of the real, individual diligence every actual `candidates` entry has
+received — a ticker appearing there is not a valid target for a new BUY, regardless of
+how favorable its numbers look. The correct response to something promising is naming it
+as a future research action, not acting on it today.
+
+A real, deliberate cost, accepted openly: this makes `council:sync-and-review`
+meaningfully slower every time, baked into the standard daily flow per the founder's
+explicit request that this happen every time, not only when remembered.
+
+**Verified:** the full chain with synthetic data — a packet correctly carrying real
+screen results through when provided, correctly degrading to `null` when omitted. The
+per-screen resilience pattern confirmed directly: one screen throwing a real, simulated
+error degrades to an empty result alone, while the others complete normally. The
+ticker-resolution enhancement verified separately: a company with a resolvable ticker
+kept and tagged correctly, one without any resolvable ticker dropped rather than
+fabricated.
+
 ### Paper Portfolio Sync
 
 `alpacaTrading.ts` is a **read-only** client for a real Alpaca paper trading account —

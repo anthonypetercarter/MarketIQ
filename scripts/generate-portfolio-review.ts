@@ -34,6 +34,11 @@ import {
 } from "../src/lib/portfolio/playbook";
 import { countConsecutiveRiskFlaggedDays } from "../src/lib/council/riskEscalation";
 import { assembleResearchPacket } from "../src/lib/council/researchPacket";
+import type { ResearchPacketScreenResults } from "../src/lib/council/researchPacket";
+import { runQualityScreen } from "./screen-quality";
+import { runGrowthScreen } from "./screen-growth";
+import { runValueScreen } from "./screen-value";
+import { runBalanceSheetScreen } from "./screen-balance-sheet";
 import { callCouncilForPortfolioReview } from "../src/lib/council/generatePortfolioReview";
 import { validatePortfolioReview } from "../src/lib/council/validatePortfolioReview";
 import { fetchFundamentalsResilient, type KeyFundamentals } from "../src/lib/marketdata/edgar";
@@ -162,6 +167,65 @@ async function main() {
       if (h.conviction !== undefined) priorConvictionByTicker.set(h.ticker, h.conviction);
     }
   }
+
+  // Real, raw, unvetted output from all four factor screens (decision
+  // #24) — run every time this script runs, not just on request, per the
+  // founder's explicit ask to pull all available real information into
+  // every real review. Deliberately resilient per-screen: a real,
+  // live failure in any one screen (a real SEC outage, a real rate
+  // limit) is caught and logged, degrading that screen's real
+  // contribution to an empty list rather than crashing the whole daily
+  // review over a research signal that was never required to complete
+  // it. Top 10 from each screen only, to keep the packet a reasonable
+  // size for the Council to actually read.
+  console.log("\nRunning the four real factor screens for today's research packet...");
+  async function runScreenResilient<T>(name: string, run: () => Promise<T[]>): Promise<T[]> {
+    try {
+      return await run();
+    } catch (e) {
+      console.log(
+        `  ${name} screen failed (${e instanceof Error ? e.message : String(e)}) — continuing with an empty result for this screen.`,
+      );
+      return [];
+    }
+  }
+
+  const qualityResults = await runScreenResilient("Quality", runQualityScreen);
+  const growthResults = await runScreenResilient("Growth", runGrowthScreen);
+  const valueResults = await runScreenResilient("Value", runValueScreen);
+  const balanceSheetResults = await runScreenResilient(
+    "Balance Sheet strength",
+    runBalanceSheetScreen,
+  );
+
+  const screenResults: ResearchPacketScreenResults = {
+    quality: qualityResults.slice(0, 10).map((r) => ({
+      ticker: r.ticker,
+      entityName: r.entityName,
+      currentMarginPercent: r.currentMarginPercent,
+      marginChangePoints: r.marginChangePoints,
+    })),
+    growth: growthResults.slice(0, 10).map((r) => ({
+      ticker: r.ticker,
+      entityName: r.entityName,
+      recentGrowthPercent: r.recentGrowthPercent,
+      accelerationPoints: r.accelerationPoints,
+    })),
+    value: valueResults.slice(0, 10).map((r) => ({
+      ticker: r.ticker,
+      entityName: r.entityName,
+      realPriceToEarnings: r.realPriceToEarnings,
+      realPriceToBook: r.realPriceToBook,
+    })),
+    balanceSheet: balanceSheetResults.slice(0, 10).map((r) => ({
+      ticker: r.ticker,
+      entityName: r.entityName,
+      leverageRatio: r.leverageRatio,
+    })),
+  };
+  console.log(
+    `Real screen results ready: ${screenResults.quality.length} Quality, ${screenResults.growth.length} Growth, ${screenResults.value.length} Value, ${screenResults.balanceSheet.length} Balance Sheet strength.`,
+  );
 
   const packet = assembleResearchPacket({
     holdings: holdingsForCalc,

@@ -19,12 +19,13 @@
 import "dotenv/config";
 import { fetchFrame, parseFrameEntries, buildCikToTickerMap } from "../src/lib/marketdata/edgar";
 import { computeBalanceSheetScreen } from "../src/lib/research/balanceSheetScreen";
+import type { BalanceSheetScreenResult } from "../src/lib/research/balanceSheetScreen";
 
 const INSTANT_PERIOD = "CY2024Q4I";
 const MIN_ASSETS_FLOOR = 1_000_000_000;
 const PACING_MS = 200;
 
-export async function runBalanceSheetScreen(): Promise<void> {
+export async function runBalanceSheetScreen(): Promise<BalanceSheetScreenResult[]> {
   console.log(`Fetching real Assets for ${INSTANT_PERIOD}...`);
   const assetsRaw = await fetchFrame("us-gaap", "Assets", "USD", INSTANT_PERIOD);
   const assets = parseFrameEntries(assetsRaw);
@@ -57,6 +58,7 @@ export async function runBalanceSheetScreen(): Promise<void> {
       `  ${r.entityName.padEnd(35)} ${r.ticker.padEnd(8)} liabilities/assets ${(r.leverageRatio * 100).toFixed(1)}%`,
     );
   }
+  return results;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

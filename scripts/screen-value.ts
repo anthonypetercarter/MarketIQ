@@ -24,6 +24,7 @@ import {
   shortlistValueCandidates,
   computeValueScreenResults,
 } from "../src/lib/research/valueScreen";
+import type { ValueScreenResult } from "../src/lib/research/valueScreen";
 
 const PERIOD = "CY2024";
 const EQUITY_INSTANT_PERIOD = "CY2024Q4I";
@@ -35,7 +36,7 @@ const SHARES_INSTANT_PERIODS = ["CY2026Q1I", "CY2025Q4I", "CY2025Q3I", "CY2025Q2
 const MIN_STOCKHOLDERS_EQUITY_FLOOR = 1_000_000_000;
 const PACING_MS = 200;
 
-export async function runValueScreen(): Promise<void> {
+export async function runValueScreen(): Promise<ValueScreenResult[]> {
   console.log(`Fetching real NetIncomeLoss for ${PERIOD}...`);
   const netIncomeRaw = await fetchFrame("us-gaap", "NetIncomeLoss", "USD", PERIOD);
   const netIncome = parseFrameEntries(netIncomeRaw);
@@ -81,7 +82,7 @@ export async function runValueScreen(): Promise<void> {
       "\nNo real candidates shortlisted at all — worth checking the dei/instantaneous-period " +
         "assumption for shares outstanding before assuming the fundamentals logic is wrong.",
     );
-    return;
+    return [];
   }
 
   console.log(
@@ -109,6 +110,7 @@ export async function runValueScreen(): Promise<void> {
       `  ${r.entityName.padEnd(35)} ${r.ticker.padEnd(8)} P/E ${r.realPriceToEarnings.toFixed(1).padEnd(8)} P/B ${r.realPriceToBook.toFixed(2)}`,
     );
   }
+  return summary.results;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

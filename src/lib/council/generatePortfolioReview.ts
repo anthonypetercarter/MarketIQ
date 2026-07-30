@@ -155,6 +155,19 @@ function buildSystemPrompt(): string {
       "reason to seriously weigh a swap, not a mechanical instruction to always execute one. A holding " +
       "with a real, still-strong conviction should not be trimmed just because a new candidate exists, " +
       "however appealing — the same discipline as every other REDUCE.",
+    "- The packet's `screenResults` field contains real, current, raw output from four market-wide factor " +
+      "screens (Quality, Growth, Value, Balance Sheet strength) — genuinely useful, current data, but " +
+      "explicitly NOT equivalent to anything in `candidates`. Every name in `candidates` has already been " +
+      "through a real, individual diligence pass — checked for real complications a numeric screen can't " +
+      "see (a securities-fraud investigation, a genuine revenue decline masked by an annual aggregate, " +
+      "heavy insider selling), the same way AppLovin's real fundamentals looked excellent on paper but " +
+      "were correctly excluded once actual diligence surfaced serious real problems. A ticker appearing " +
+      "in `screenResults` has received none of that real scrutiny — it cleared a numeric threshold, " +
+      "nothing more. Never treat a screen appearance alone as sufficient evidence for a BUY verdict; a " +
+      "ticker in `screenResults` is not a valid candidate for a new position today, regardless of how " +
+      "favorable its numbers look. If something in `screenResults` looks genuinely worth a closer look, " +
+      "the correct response is to name it as a real, specific research action for a future review — not " +
+      "to act on it now.",
   ].join("\n");
 }
 
